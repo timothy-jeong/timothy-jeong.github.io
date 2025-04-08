@@ -1,0 +1,285 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="../assets/css/style.css" />
+    <title>GraphQL vs REST vs gRPC: 개념과 설계 철학, 성능 특성 비교</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">GraphQL vs REST vs gRPC: 개념과 설계 철학, 성능 특성 비교</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/GraphQL</p>
+                                    <p class="date">2025-03-29 13:52:43</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="550" height="233" >
+    <span data-lightbox="lightbox">
+        <img src="../assets/img/graphql_vs_rest_vs_grpc/thumb.webp" width="550" height="233"  />
+    </span>
+    <figcaption>https://pradeepl.com/blog/api/rest-vs-graphql-vs-grpc/</figcaption>
+</figure></p>
+<p data-ke-size="size16">기존에 REST 와 gRPC로 데이터를 서빙하던 FastAPI 서버에 <a href="https://graphql.org/learn/" target="_blank" rel="noopener">GraphQL</a>을 도입하게 되었습니다. 필드가 많은 데이터를 서빙하는 서버였는데, 다수의 클라이언트에 서로 다른 인터페이스의 API를 서빙해야 했습니다. 그렇다면 REST 보다는 데이터 질의가 유연한 GraphQL을 도입하는게 좋겠다는 결론을 내렸고, 이미 잘 만들어진 라이브러리와 공식문서 덕분에 3일만에 배포할 수 있었습니다. 일단 구현은 했고, 이제는 블로그에 글을 연재하면서 관련 이론과 케이스 스터디를 진행해보려고 합니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이번 글에서는 REST와 gRPC 그리고 GraphQL의 개념, 설계철학을 알아보고 성능 특성을 비교하여 향후 프로젝트를 진행할때 적절한 기술을 선택할 수 있는 기반을 다지고자합니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-end="468" data-start="443" data-ke-size="size26"><b>REST: 리소스 중심의 API 아키텍처</b></h2>
+<p><figure class="imageblock alignCenter" width="450" height="315" >
+    <span data-lightbox="lightbox">
+        <img src="../assets/img/graphql_vs_rest_vs_grpc/edited_rest-diagram.webp" width="450" height="315"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-end="967" data-start="470" data-ke-size="size16"><a href="https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm" target="_blank" rel="noopener">REST(Representational State Transfer)는 Roy Fielding</a>의 논문에서 정립된 아키텍처 스타일로, <b>HTTP</b> <b>프로토콜을 기반으로 클라이언트와 서버가 상호 작용하는 가장 전통적인 방식</b>입니다​. RESTful API에서는 <b>리소스</b>(자원)를 중심으로 URL 엔드포인트를 설계하고, HTTP의 표준 메서드를 통해 해당 자원에 대한 생성, 조회, 갱신, 삭제(CRUD) 작업을 수행합니다. REST의 중요한 특징은 <b>무상태성(stateless)</b>으로, 각 요청이 이전 요청의 상태에 영향받지 않고 독립적으로 처리됩니다. 또한 <a href="https://docs.aws.amazon.com/appsync/latest/devguide/what-is-rest.html" target="_blank" rel="noopener"><b>균일 인터페이스(uniform interface)</b></a>를 지향하여, 일관된 방식으로 자원에 접근하고 표현하도록 규약합니다​.<span data-state="closed"></span></p>
+<h3 data-end="1466" data-start="969" data-ke-size="size23"><b>REST의 장점과 단점</b></h3>
+<p data-ke-size="size16">대다수의 사람들에게 익숙한 개념이기 때문에 추가로 정리할 내용은 없는것 같습니다. 다른 기술들과 비교를 위해 장점, 단점만 정리하겠습니다.</p>
+<h4 data-end="2123" data-start="2108" data-ke-size="size20"><b>REST의 장점:</b></h4>
+<ul style="list-style-type: disc;" data-end="2686" data-start="2124" data-ke-list-type="disc">
+<li data-end="2229" data-start="2124"><b>단순성:</b> HTTP 기반으로 동작하므로 이해하기 쉽고 구현이 용이합니다. 클라이언트에서 curl이나 브라우저로도 테스트할 수 있고, 기존 웹 기술 스택을 그대로 활용합니다.</li>
+<li data-end="2417" data-start="2230"><b>광범위한 호환성:</b> JSON, XML 등 <b>여러 포맷</b>을 주고받을 수 있고​, 언어나 플랫폼과 무관하게 모든 HTTP 클라이언트가 이용 가능하여 범용성이 높습니다​</li>
+<li data-end="2558" data-start="2418"><b>캐싱 등 웹 인프라 활용:</b> HTTP 프로토콜의 캐시 제어 등을 활용하여 성능 개선이 가능하고, 로드 밸런서나 게이트웨이 등 기존 인프라와 쉽게 연동됩니다​.</li>
+<li data-end="2686" data-start="2559"><b>성숙한 생태계:</b> 오랜 기간 사용되어 온 만큼 문서화, 모니터링, 테스트를 위한 <b>풍부한 도구</b>와 커뮤니티 지식이 축적되어 있습니다​.</li>
+</ul>
+<h4 data-end="2703" data-start="2688" data-ke-size="size20"><b>REST의 단점:</b></h4>
+<ul style="list-style-type: disc;" data-end="3230" data-start="2704" data-ke-list-type="disc">
+<li data-end="2837" data-start="2704"><b>과/미페치 문제:</b> 고정된 응답 구조로 인해 필요 이상의 데이터를 받거나 필요한 데이터를 한 번에 못 받아 여러 호출이 필요한 문제가 흔합니다​.</li>
+<li data-end="2989" data-start="2838"><b>성능 한계:</b> 텍스트 기반 통신으로 이진 프로토콜에 비해 메시지 크기, 처리에서 불이익이 있으며 HTTP/1.x 오버헤드로 인해 고성능이 요구되는 환경에서는 비효율적일 수 있습니다​. 대용량 데이터 전송이나 실시간 상호작용에는 부적합합니다.</li>
+<li data-end="3102" data-start="2990"><b>버전 관리 부담:</b> 클라이언트 호환성을 유지하면서 API를 발전시키기 어려워, 새로운 기능 추가 시 종종 API 버전을 올려야 합니다. 이는 API 소비자와 제공자 모두에게 부담이 됩니다.</li>
+<li data-end="3230" data-start="3103"><b>실시간 기능의 부재:</b> 표준 REST에는 서버-&gt;클라이언트 <b>푸시</b>나 실시간 스트리밍 기능이 없어, 실시간 업데이트가 필요할 경우 WebSocket이나 Server-Sent Events 등을 별도로 구현해야 합니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 style="color: #000000; text-align: start;" data-ke-size="size26" data-start="7816" data-end="7838"><b>gRPC: 고성능 RPC 프레임워크</b></h2>
+<p style="color: #333333; text-align: start;" data-start="7840" data-end="8338" data-ke-size="size16">gRPC는 Google이 개발하여 2015년에 오픈 소스로 공개한<span>&nbsp;</span><b>고성능 RPC</b>(Remote Procedure Call) 프레임워크입니다​. gRPC에서는 서비스와 메서드를 정의한<span>&nbsp;</span><b>프로토콜 버퍼(Protocol Buffers)</b><span>&nbsp;</span>기반의 인터페이스 정의서(IDL)를 토대로, 클라이언트와 서버가<span>&nbsp;</span><b>강력한 타입의 Stub 코드</b>를 생성하여 사용합니다. 쉽게 말해, 원격 서버의 함수를 로컬에서 호출하듯이 사용할 수 있게 해주는 기술입니다. HTTP/2 프로토콜을 전송 계층으로 사용하며, 요청과 응답 데이터는<span>&nbsp;</span><b>프로토콜 버퍼</b><span>&nbsp;</span>형식으로<span>&nbsp;</span><b>바이너리 직렬화</b>되어 교환됩니다​. 이러한 구조 덕분에 gRPC는<span>&nbsp;</span><b>빠르고 효율적인 통신</b>을 지원하며, 다양한 프로그래밍 언어에서 생성된 코드로 상호 운용이 가능합니다.</p>
+<div style="color: #333333; text-align: start;">&nbsp;</div>
+<p style="color: #333333; text-align: start;" data-start="8340" data-end="8852" data-ke-size="size16">gRPC의 설계 철학은<span>&nbsp;</span><b>계약 우선(contract-first)</b>,<span>&nbsp;</span><b>엄격한 스키마</b><span>&nbsp;</span>및<span>&nbsp;</span><b>효율성</b>으로 요약됩니다​. API의<span>&nbsp;</span><b>인터페이스</b>를 먼저 .proto 파일로 정의하고, 이 계약에 맞춰 양측 코드가 생성되므로 개발자간 명세 불일치가 적고 안정성이 높습니다​. 또한 메시지 형식을 바이너리로 엄격히 정의하기 때문에, REST나 GraphQL처럼 각 요청마다 <b>데이터를 해석하고 검증하는 오버헤드가 줄어듭니다.</b> gRPC는 데이터보다는<span>&nbsp;</span><b>동작</b>(원격 함수 호출)에 초점을 맞추고 있어서, 마치 객체의 메서드를 호출하듯 서비스를 사용하게 해줍니다. 그 대신 REST처럼 리소스 경로만 알면 되는 것이 아니라, 사전에 컴파일된 클라이언트 코드(Stub)를 사용해야 한다는 차이가 있습니다.</p>
+<h3 style="color: #333333; text-align: start;" data-start="10202" data-end="10437" data-ke-size="size23"><b>gRPC를 구성하는 요소</b></h3>
+<p data-ke-size="size16">이미 python gRPC 시리즈에서 다룬 내용이지만, 이 글만 읽어서 gRPC가 낯선 사람들을 위해 간단히 gRPC를 구성하는 요소들을 정리해보자면 다음과 같습니다</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="../assets/img/graphql_vs_rest_vs_grpc/landing-2.webp"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16" data-start="10202" data-end="10437">.proto 파일에 의해 정의된 Proto Request, Proto Response가 각 서비스에 정의된 gRPC Stub, gRPC Server에 의해 통신되는 구조입니다. 이때 각 연결된 서비스들은 엄격히 정의된 .proto 파일의 제한을 받는것으로 안정성을 향상시킵니다.</p>
+<h3 style="color: #000000; text-align: start;" data-ke-size="size23" data-start="10202" data-end="10437"><b>gRPC의 활용</b></h3>
+<p style="color: #000000; text-align: start;" data-ke-size="size16" data-start="10202" data-end="10437">gRPC는 웹 브라우저 환경에서 바로 사용하기 어려운데, 브라우저가 HTTP/2 상의 임의의 바이너리 프로토콜 호출을 직접 수행할 수 없기 때문입니다​. 이를 해결하기 위해 <a href="https://github.com/grpc/grpc-web" target="_blank" rel="noopener">gRPC-Web</a>이라는 별도 기술이 존재하지만, 순수 웹 클라이언트만 대상으로 하는 공개 API라면 REST나 GraphQL 대비 구현이 복잡해질 수 있습니다. 그럼에도 불구하고 서버-서버 통신이나 모바일 앱과 백엔드 간 통신 등<span>&nbsp;</span><b>통제된 환경</b>에서는 gRPC의 이점이 커서, 강력한 타입 안전성과 성능 때문에 선호됩니다.</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16" data-start="10202" data-end="10437">&nbsp;</p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16" data-end="10437" data-start="10202">gRPC는 주로<span>&nbsp;</span><b>내부 시스템</b>이나<span>&nbsp;</span><b>마이크로서비스</b><span>&nbsp;</span>아키텍처에서 서비스 간 통신에 많이 쓰이며, 외부 개발자에게 공개하는 API보다는<span>&nbsp;</span><b>사내 API</b><span>&nbsp;</span>용도에 적합하다는 평가를 받습니다. 대표적인 도입 사례로는 Google, Netflix 외에도 Uber가 대규모 실시간 플랫폼에 gRPC를 활용하고 있는것으로 알려져있으며, <a href="https://www.redhat.com/en/blog/grpc-use-cases" target="_blank" rel="noopener">Red Hat Blog</a>에서는 gRPC의 활용에 대한 사례를 다루고 있어서 참고할만 합니다.</p>
+<h3 style="color: #000000; text-align: start;" data-ke-size="size23" data-start="10202" data-end="10437"><b>gRPC의 장점과 단점</b></h3>
+<p data-ke-size="size16">gRPC의 가장 큰 강점은<span>&nbsp;</span><b>성능과 네트워크 효율</b>입니다. HTTP/2의 멀티플렉싱과 헤더 압축, 프로토콜 버퍼의 바이너리 직렬화를 결합하여 매우 낮은 대기 시간(latency)과 높은 처리량(throughput)을 보여줍니다. 실제로 동일한 API를 gRPC로 구현하면 REST 대비 응답 속도가 크게 향상될 수 있는데, 이는 HTTP/2의<span>&nbsp;</span><b>스트림</b><span>&nbsp;</span>기능으로 다중 요청을 단일 연결에서 병렬 처리하고, 이진 데이터로 데이터 크기를 최소화하기 때문입니다​<span></span>.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">또한 gRPC는<span> </span>서버-&gt;클라이언트 스트림, 클라이언트-&gt;서버 스트림, 양방향<b> 스트림 등의 통신 패턴</b>을 제공하기 때문에 실시간 양방향 통신이나 대용량 데이터 스트림 전송에 매우 유리합니다​<span></span>. 예를 들어 채팅, 화상통화, 실시간 데이터 피드 등은 gRPC의 스트리밍을 활용해 구현할 수 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p style="color: #333333; text-align: start;" data-end="10200" data-start="9546" data-ke-size="size16">한편, gRPC를 사용하려면<span>&nbsp;</span><b>초기 설정과 학습 부담</b>이 다소 있습니다. 프로토콜 버퍼<span>&nbsp;</span><b>IDL</b><span>&nbsp;</span>문법을 익히고 .proto 파일을 작성해야 하며, 이를 기반으로 서버와 클라이언트 코드를 생성하는 빌드 과정을 거쳐야 합니다. REST나 GraphQL처럼 인간이 읽을 수 있는 JSON을 주고받는 것이 아니므로, 디버깅이나 테스트 시 일반적인 HTTP 툴로는 내부 내용을 직접 확인하기 어렵습니다​. <span style="color: #000000; text-align: start;">대신</span><span style="color: #000000; text-align: start;">&nbsp;</span><b>grpcurl</b><span style="color: #000000; text-align: start;">과 같은 전용 도구나 로깅을 통해 디버깅을 해야 합니다.<span>&nbsp;</span></span></p>
+<p style="color: #333333; text-align: start;" data-end="10200" data-start="9546" data-ke-size="size16">&nbsp;</p>
+<p style="color: #333333; text-align: start;" data-start="10439" data-end="10454" data-ke-size="size16"><b>gRPC의 장점:</b></p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc" data-start="10455" data-end="11237">
+<li data-start="10455" data-end="10613"><b>우수한 성능:</b><span>&nbsp;</span>이진 프로토콜과 HTTP/2 기반으로 매우 빠른 응답 시간과 높은 처리량을 보입니다. 동일 환경에서 REST 대비 지연 시간이 현저히 낮고 효율적이라는 것이 입증되었습니다​.</li>
+<li data-start="10614" data-end="10776"><b>스트리밍 지원:</b><span>&nbsp;</span>요청-응답 외에 스트리밍 방식 통신을 기본으로 지원하여, 실시간 양방향 데이터 송수신이나 스트림 전송에 용이합니다​. 별도의 프로토콜 없이도 스트리밍 API를 구현할 수 있습니다.</li>
+<li data-start="10777" data-end="10948"><b>엄격한 스키마와 타입:</b><span>&nbsp;</span>프로토콜 버퍼 IDL로 메시지 구조와 서비스를 명시적으로 정의하므로, 클라이언트-서버 간 인터페이스가 명확하고 타입 안정성이 높습니다​. 컴파일 타임에 검증되므로 런타임 오류가 줄어듭니다.</li>
+<li data-start="10949" data-end="11113"><b>다중 언어 및 플랫폼 지원:</b><span>&nbsp;</span>공식 툴체인이 다양한 언어를 지원하여(예: C++, Java, Python, Go 등), 서로 다른 기술 스택 사이의 통신도 통합된 방식으로 처리할 수 있습니다. 한 번 IDL을 작성하면 여러 언어의 클라이언트/서버 코드를 생성해 사용할 수 있습니다.</li>
+<li data-start="11114" data-end="11237"><b>효율적인 데이터 전송:</b><span>&nbsp;</span>프로토콜 버퍼는 JSON 대비 데이터 크기가 작고 파싱 속도가 빠르며, 필드가 정의된 것만 전송하므로 불필요한 데이터가 오가지 않습니다. 네트워크 대역폭이 제한적인 환경에서도 유리합니다.</li>
+</ul>
+<p style="color: #333333; text-align: start;" data-start="11239" data-end="11254" data-ke-size="size16"><b>gRPC의 단점:</b></p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc" data-start="11255" data-end="12081">
+<li data-start="11255" data-end="11418"><b>브라우저 미지원:</b><span>&nbsp;</span>웹 브라우저에서는 gRPC 호출을 직접 할 수 없어 별도의 프록시(gRPC-Web) 또는 폴백이 필요합니다​. 따라서 웹 프런트엔드 대상의 공개 API에는 추가 작업이 요구됩니다.</li>
+<li data-start="11419" data-end="11577"><b>학습 곡선:</b><span>&nbsp;</span>새로운 IDL 문법과 RPC 개념에 익숙해져야 하고, 빌드/코드생성 파이프라인을 구축해야 하므로 초기 진입 장벽이 있습니다​. 작은 팀이나 단순 서비스에는 설정 부담이 큽니다.</li>
+<li data-start="11578" data-end="11745"><b>디버깅 어려움:</b><span>&nbsp;</span>메시지가 바이너리라 사람이 읽기 어려워, 문제 발생 시 HTTP 기반 API만큼 직관적으로 디버깅하기 힘듭니다​. 전용 도구가 필요하며, 로그 분석 등으로 추상화된 호출을 추적해야 합니다.</li>
+<li data-start="11746" data-end="11896"><b>유연성 감소:</b><span>&nbsp;</span>클라이언트가 고정된 stub와 메시지 형식에 의존하므로, GraphQL처럼 요청마다 필드를 가감할 유연성은 없습니다. 계약을 변경하려면 양측 코드를 재생성 및 배포해야 하므로, 빈번한 요구사항 변경이 있는 경우 대응이 번거로울 수 있습니다.</li>
+<li data-start="11897" data-end="12081"><b>서비스 공개 어려움:</b><span>&nbsp;</span>주로 내부 통신용으로 설계되어 외부 공개 API로 사용할 때는 REST만큼 친숙한 표준이 아니며, 서드파티가 쉽게 호출하기 어렵습니다. 따라서 파트너나 공개 API에는 부적합할 수 있고 (대신 SDK 배포 필요), 이러한 경우 보통 REST나 GraphQL로<span>&nbsp;</span><b>게이트웨이</b>를 마련해 공개합니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-end="3257" data-start="3232" data-ke-size="size26"><b>GraphQL: 유연한 데이터 질의 언어</b></h2>
+<p><figure class="imageblock alignCenter" width="630" height="351" >
+    <span data-lightbox="lightbox">
+        <img src="../assets/img/graphql_vs_rest_vs_grpc/graphql-on-http.webp" width="630" height="351"  />
+    </span>
+    <figcaption>https://hasura.io/learn/graphql/intro-graphql/what-is-graphql/</figcaption>
+</figure></p>
+<p data-end="3826" data-start="3259" data-ke-size="size16">GraphQL은 Facebook(메타)이 2012년 개발하여 2015년 공개한 <b>API 질의 언어(query language)</b>입니다​. 일반적인 REST API와 달리 <b>단일 엔드포인트</b>에 요청을 보내서, <b>클라이언트가 필요한 데이터 필드를 선택하여 질의</b>할 수 있다는 점이 가장 큰 특징입니다​<span data-state="closed"></span><span data-state="closed"></span>. GraphQL 서버는 사전에 정의된 <b>스키마(schema)</b>를 기반으로 클라이언트의 <b>질의(query)</b>를 해석하고 적절한 데이터를 모아 응답합니다. 클라이언트는 한 번의 요청으로 <b>필요한 데이터만</b> 정확히 받아올 수 있으므로, 다수의 REST호출을 대체하여 네트워크 효율을 높일 수 있습니다.</p>
+<p data-end="3826" data-start="3259" data-ke-size="size16">&nbsp;</p>
+<p data-end="4358" data-start="3828" data-ke-size="size16">GraphQL의 설계 철학은 <b>데이터 중심</b>의 <b>유연성</b>에 있습니다. 클라이언트가 데이터 형태를 지정해서 요청할 수 있으므로, API 설계자는 다양한 클라이언트 요구사항을 하나의 통합된 <a href="https://www.geeksforgeeks.org/introduction-to-graphs-data-structure-and-algorithm-tutorials/" target="_blank" rel="noopener"><b>그래프</b></a>형태로 충족시킬 수 있습니다​. GraphQL 스키마는 타입 시스템으로 모델링된 도메인 객체와 그 관계(예: User 타입이 Post 타입 목록을 가질 수 있음)를 정의하며, 이를 통해 API는 자체 <b>자가문서화(self-documenting)</b> 특성을 갖게 됩니다. 클라이언트는 스키마를 <b>인스펙션</b>하여 어떤 쿼리와 필드가 존재하는지 알 수 있고, 필요에 따라 조합하여 사용할 수 있습니다. REST가 URL 단위의 <b>리소스</b> 표현에 초점을 맞춘 반면, GraphQL은 전체 데이터 모델을 하나의 그래프로 파악하고 <b>필요한 부분집합을 질의</b>하는 접근을 취합니다​.<span data-state="closed"></span></p>
+<h3 data-end="6078" data-start="5585" data-ke-size="size23"><b>GraphQL을 구성하는 요소</b></h3>
+<p data-ke-size="size16">GraphQL의 개념을 살펴본것만으로도 GraphQL Server, Query, Schema, Self-Documenting 와 같은 새로운 개념이 등장했습니다. 사실은 여기에 더해서 Mutation 이라는 개념도 있어서 이를 간단히 다뤄보겠습니다.</p>
+<h4 data-ke-size="size20"><b>1. GraphQL Server</b></h4>
+<p data-ke-size="size16">GraphQL 서버는 클라이언트의 요청을 받아서, 사전에 정의된 스키마에 따라 해당 요청을 처리합니다. 서버는 Query, Mutation, 그리고 (옵션으로) Subscription 요청을 처리하며, 각 요청에 대해 적절한 리졸버(resolver)함수를 호출합니다. 이 리졸버 함수는 실제 데이터 소스(데이터베이스, 외부 API 등)와 연동되어 데이터를 가져오거나 수정하는 역할을 수행합니다.</p>
+<h4 data-ke-size="size20"><b>2. Schema</b></h4>
+<p data-ke-size="size16">스키마는 GraphQL API의 계약(contract)을 정의하는 역할을 합니다. 여기에는 어떤 타입의 데이터가 존재하는지, 그리고 클라이언트가 어떤 <b>Query</b>와 <b>Mutation</b>을 수행할 수 있는지가 명시되어 있습니다. 스키마는 GraphQL SDL(Schema Definition Language)로 작성되며, 이를 통해 API의 모든 구성 요소를 명확하게 표현하고, 클라이언트는 스키마를 통해 API의 사용법을 쉽게 이해할 수 있습니다.</p>
+<h4 data-ke-size="size20"><b>3. Query</b></h4>
+<p data-ke-size="size16">쿼리는 클라이언트가 서버에 <b>데이터 요청</b>을 보낼 때 사용하는 명령어입니다. 쿼리 문법을 통해 클라이언트는 어떤 데이터가 필요한지, 그리고 그 데이터의 구조를 명시할 수 있습니다. 이로 인해 한 번의 요청으로 여러 종류의 관련 데이터를 효율적으로 조회할 수 있게 됩니다.</p>
+<h4 data-ke-size="size20"><b>4. Mutation</b></h4>
+<p data-ke-size="size16">Mutation은 <b>데이터의 변경</b>(생성, 수정, 삭제)을 담당하는 명령어입니다. REST API에서 POST, PUT, DELETE 요청과 유사하지만, GraphQL에서는 Mutation을 통해 요청에 대한 인자와 반환 필드를 구체적으로 지정할 수 있습니다. 이를 통해 클라이언트는 변경된 데이터의 상태를 정확하게 확인할 수 있습니다.</p>
+<h4 data-ke-size="size20"><b>5. Resolver</b></h4>
+<p data-ke-size="size16">각 쿼리나 Mutation이 호출되면, 해당 요청은 <b>리졸버(resolver)</b>함수로 전달됩니다. 리졸버는 스키마의 각 필드와 매핑되어 있으며, 데이터 소스에 접근해 실제 데이터를 가져오거나 변경하는 핵심 로직을 수행합니다. 이 과정에서 데이터베이스 호출, 캐싱, 또는 외부 API 호출 등의 다양한 작업이 이루어집니다.</p>
+<h4 data-ke-size="size20"><b>6. Subscription</b></h4>
+<p data-ke-size="size16">Subscription은 실시간 데이터 업데이트를 위한 메커니즘입니다. 클라이언트는 특정 이벤트나 데이터 변경 사항을 <b>구독(subscription)</b>하고, 서버는 변경 사항이 발생할 때마다 이를 실시간으로 클라이언트에 전송합니다. 이 기능은 실시간 채팅, 알림, 스트리밍 데이터 등 동적 데이터 전송에 매우 유용합니다.</p>
+<h4 data-ke-size="size20"><b>7. Self-Documentation</b></h4>
+<p data-ke-size="size16">GraphQL은 스키마를 기반으로 <b>자동 문서화(Self-Documenting)</b>가 가능합니다. GraphiQL 같은 도구를 사용하면, 클라이언트 개발자는 인터랙티브하게 API를 탐색하고 테스트할 수 있으며, 스키마에 정의된 모든 타입과 필드를 쉽게 확인할 수 있습니다. 이는 개발자 경험을 크게 향상시킵니다.</p>
+<h3 data-end="6078" data-start="5585" data-ke-size="size23"><b>GraphQL의 활용</b></h3>
+<p data-end="6078" data-start="5585" data-ke-size="size16">GraphQL은 <b>복잡한 도메인</b>이나 <b>다양한 요구 사항</b>이 있는 서비스에 특히 잘 맞습니다. 예를 들어, 전자상거래 애플리케이션에서 제품 정보, 재고, 사용자 리뷰를 각각 다른 마이크로서비스나 데이터베이스에서 가져와야 한다면 GraphQL 게이트웨이가 이를 한 번에 조합하여 제공할 수 있습니다. 이러한 이유로 다수의 기업들이 GraphQL을 도입하고 있는데, GitHub는 REST API에 이어 GraphQL 기반 API를 제공하고 있으며, Shopify, PayPal, Netflix, Facebook 등에서도 GraphQL을 통해 클라이언트에게 유연한 API를 제공합니다​. 내부 시스템을 통합하여 단일 API로 노출해야 하는 <b>BFF(Backend for Frontend)</b> 패턴이나, 모바일/웹 클라이언트마다 데이터 요구 사항이 상이한 경우에 GraphQL은 유용한 선택입니다.</p>
+<h3 data-end="6078" data-start="5585" data-ke-size="size23"><b>GraphQL의 장점과 단점</b></h3>
+<p style="color: #333333; text-align: start;" data-start="4360" data-end="4824" data-ke-size="size16">GraphQL을 사용하면 클라이언트는 오직 필요한 데이터만 받으므로<span>&nbsp;</span><b>네트워크 효율성</b><span>&nbsp;</span>측면에서 유리합니다​. 특히<span>&nbsp;</span><b>모바일</b>이나<span>&nbsp;</span><b>저대역폭 환경</b>에서는 다수의 REST 호출을 한 번의 GraphQL 호출로 대체함으로써 응답 속도를 향상시킬 수 있습니다. Facebook이 초기 GraphQL을 도입한 계기도 모바일 앱에서<span>&nbsp;</span><b>뉴스피드</b><span>&nbsp;</span>데이터를 가져올 때 여러 REST API 호출을 하나로 통합하기 위함이었습니다​. 또한 GraphQL은<span>&nbsp;</span><a href="https://www.apollographql.com/blog/the-next-step-for-realtime-data-in-graphql#enter-graphql-subscriptions" target="_blank" rel="noopener"><b>구독(subscription)</b></a><span>&nbsp;</span>기능을 통해 서버가 실시간으로 데이터 변경 사항을 푸시할 수 있는 메커니즘을 제공합니다. 이를 활용하면 실시간 피드나 알림과 같은 기능도 GraphQL 안에서 구현이 가능합니다.</p>
+<p style="color: #333333; text-align: start;" data-start="4360" data-end="4824" data-ke-size="size16">&nbsp;</p>
+<p style="color: #333333; text-align: start;" data-start="4826" data-end="5583" data-ke-size="size16">그러나 GraphQL은 서버 측 구현의<span>&nbsp;</span><b>복잡도</b>가 높을 수 있습니다. 클라이언트가 임의의 질의를 보낼 수 있기 때문에, 서버는 각 질의에 맞춰 데이터를 조합하는<span>&nbsp;</span><b>리졸버(resolver)</b><span>&nbsp;</span>로직을 잘 최적화해야 합니다. 복잡한 질의의 경우 서버 부하가 급증할 우려가 있고​, N+1 쿼리 문제 등 효율적인 데이터 로딩을 위한 추가 구현이 필요합니다. 또한 대부분의 GraphQL 질의는 POST 요청으로 이루어지므로,<span>&nbsp;</span><b>HTTP 레벨 캐싱</b>이 바로 적용되지 않아 별도의 캐시 계층이나 Persisted Query 등을 설계해야 할 수 있습니다​. 클라이언트가 자유롭게 질의하는 만큼, 쿼리 복잡도나 요청 빈도를 제어하기 위한<span>&nbsp;</span><b>쿼리 제한</b>(rate limiting)도 어렵습니다​. 마지막으로, REST만 사용해 온 개발자들에게는 GraphQL의 스키마 정의 언어, GraphiQL 등 새로운 도구와 개념을 학습해야 하는<span>&nbsp;</span><b>학습 곡선</b>이 존재합니다​. 반면 일단 스키마가 구축되고 나면, 프런트엔드 개발자는 백엔드 변경을 기다리지 않고도 필요한 데이터를 조합해 쓸 수 있어 개발 속도가 빨라지는 장점이 있습니다.</p>
+<h4 data-end="6098" data-start="6080" data-ke-size="size20"><b>GraphQL의 장점:</b></h4>
+<ul style="list-style-type: disc;" data-end="6904" data-start="6099" data-ke-list-type="disc">
+<li data-end="6238" data-start="6099"><b>필요한 데이터만 조회:</b> 클라이언트가 요청한 정확한 데이터만 응답하여 불필요한 전송을 줄입니다​. 이로써 <b>오버페칭</b>을 피하고 네트워크 효율을 높입니다.</li>
+<li data-end="6400" data-start="6239"><b>버전관리 부담 경감:</b> 스키마에 필드를 추가하더라도 기존 질의에는 영향이 없으므로 API <b>버전 관리</b> 없이도 확장이 용이합니다​. 새로운 기능을 추가할 때도 구버전 유지 부담이 적습니다.</li>
+<li data-end="6586" data-start="6401"><b>강력한 타입 시스템:</b> GraphQL 스키마는 엄격한 타입 정의를 가지므로, 클라이언트-서버 간 데이터 계약이 명확하고 오류를 사전에 방지할 수 있습니다​. 또한 스키마를 통한 자동 문서화 및 도구 지원(GraphiQL 등)이 뛰어납니다.<span></span></li>
+<li data-end="6790" data-start="6587"><b>클라이언트 주도형 설계:</b> 프론트엔드가 자신에게 최적화된 데이터 구조를 직접 선택할 수 있어, 다양한 화면이나 디바이스별로 효율적인 데이터 활용이 가능합니다. 하나의 요청으로 복수의 관련 데이터를 가져올 수 있어 복잡한 화면의 데이터를 <b>일괄 조회</b>하기에 좋습니다​.<span></span></li>
+<li data-end="6904" data-start="6791"><b>실시간 기능:</b> GraphQL의 구독(subscription)을 사용하면 데이터 변경 시 실시간으로 업데이트를 푸시 받을 수 있어, <b>별도 소켓 프로토콜 없이</b>도 기본적인 실시간 통신이 가능합니다.</li>
+</ul>
+<h4 data-end="6924" data-start="6906" data-ke-size="size20"><b>GraphQL의 단점:</b></h4>
+<ul style="list-style-type: disc;" data-end="7814" data-start="6925" data-ke-list-type="disc">
+<li data-end="7099" data-start="6925"><b>서버 부하 및 복잡성:</b> 유연성의 대가로 서버 구현이 복잡해질 수 있고, 잘못된 질의나 비효율적인 리졸버 구현은 서버 부하로 이어질 수 있습니다​. 특히 많은 관계를 한꺼번에 요청하는 복잡한 질의는 처리 비용이 큽니다.</li>
+<li data-end="7270" data-start="7100"><b>캐싱 어려움:</b> GraphQL 응답은 일반적으로 HTTP 레이어에서 캐싱하기 어려워​, REST처럼 브라우저나 CDN 캐시를 자동 활용할 수 없습니다. 개발자가 응답 캐싱 전략을 별도로 마련해야 할 수 있습니다.</li>
+<li data-end="7450" data-start="7271"><b>권한 및 제한 관리:</b> 엔드포인트가 하나로 통합되어 있고 질의 내용이 동적으로 변하므로, 요청별 <b>권한 제어</b>나 <b>Rate Limit</b> 정책 수립이 까다롭습니다​. 쿼리 깊이 제한, 시간 제한 등 별도 대책이 필요합니다.</li>
+<li data-end="7636" data-start="7451"><b>초기 학습 비용:</b> GraphQL 고유의 스키마 정의 문법, 쿼리 언어, 그리고 서버/클라이언트 라이브러리에 대한 학습이 필요하여 익숙해지기까지 시간이 걸립니다​. 소규모 프로젝트나 단순한 API에는 다소 <b>과설계(Overengineering)</b>가 될 수 있습니다.</li>
+<li data-end="7814" data-start="7637"><b>도구 및 생태계 제약:</b> REST만큼 범용적인 표준은 아니므로 일부 모니터링/디버깅 툴이나 기존 인프라와의 통합에서 제약이 있을 수 있습니다. 또한 HTTP가 아닌 별도 프로토콜을 사용하는 것이 아니기 때문에, HTTP/2 기반의 <b>전송 최적화</b>나 바이너리 메시지 압축 측면에서는 gRPC보다 불리합니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-end="12116" data-start="12083" data-ke-size="size26"><b>기술 비교: GraphQL vs REST vs gRPC</b></h2>
+<p data-end="12227" data-start="12118" data-ke-size="size16">앞서 살펴본 바와 같이, GraphQL, REST, gRPC는 개념적인 접근 방식부터 장단점까지 여러 측면에서 뚜렷이 대비됩니다.</p>
+<h3 data-ke-size="size23"><b>특징 RESTgRPCGraphQL: 표로 요약</b></h3>
+<table style="border-collapse: collapse; width: 100%;" border="1" data-sheets-baot="1" data-sheets-root="1" data-ke-align="alignLeft" data-ke-style="style12">
+<tbody>
+<tr>
+<td style="text-align: center;">특징</td>
+<td style="text-align: center;">REST</td>
+<td style="text-align: center;">gRPC</td>
+<td style="text-align: center;">GraphQL</td>
+</tr>
+<tr>
+<td>설계 철학</td>
+<td><span>리소스 중심 (URL 및 HTTP 메서드로 자원 표현)​</span><span>. 클라이언트가 정해진 엔드포인트에 요청.</span></td>
+<td><span>RPC 중심 (함수 호출 형태) 및 계약 기반 인터페이스 정의​</span><span style="color: #1155cc;"></span><span>. 프로토콜에 명시된 메서드 호출.</span></td>
+<td>
+<div>
+<div><span>데이터 질의 중심으로 유연한 그래프 모델​</span><span style="color: #1155cc;"><a href="https://www.infoq.com/presentations/rest-graphql-grpc/#:~:text=GraphQL%20was%20invented%20to%20solve,data%20through%20a%20single%20endpoint">i</a></span><span>. 단일 엔드포인트에서 필요한 데이터 필드 질의.</span></div>
+</div>
+</td>
+</tr>
+<tr>
+<td>데이터 포맷</td>
+<td><span>텍스트 (주로 JSON 또는 XML)</span><span>.<br />사람이 읽을 수 있어 디버깅 용이.</span></td>
+<td><span>바이너리 (프로토콜 버퍼 등)​</span><span>.<br />효율적이지만 사람이 읽기 어려움.</span></td>
+<td>
+<div>
+<div><span>텍스트 (일반적으로 JSON)​</span><span>. <br />요청은 전용 질의 언어 문법 사용.</span></div>
+</div>
+</td>
+</tr>
+<tr>
+<td>통신 프로토콜</td>
+<td><span>HTTP 1.1 (전통적인 요청/응답)​</span><span>.</span></td>
+<td><span>HTTP/2 (멀티플렉싱, 헤더 압축 지원)​.<br /></span><span>&nbsp;gRPC-Web 사용 시 HTTP/1.1 업그레이드.</span></td>
+<td>
+<div>
+<div>주로 HTTP (HTTP/1.1 또는 HTTP/2 모두 가능).</div>
+</div>
+</td>
+</tr>
+<tr>
+<td>요청-응답 패턴</td>
+<td>단순 요청/응답. 서버 푸시나 스트리밍은 별도 구현 필요.</td>
+<td><span>다양한 RPC 패턴: 단일 요청-응답, 서버 스트림, 클라이언트 스트림, 양방향 스트림 지원</span><span>.</span></td>
+<td>
+<div>
+<div><span>질의(Query)와 변경(Mutation), 구독(Subscription) 패턴 제공</span><span>. <br />구독을 통해 실시간 업데이트 가능.</span></div>
+</div>
+</td>
+</tr>
+<tr>
+<td>스키마/타입 체계</td>
+<td>공식 스키마 없음 .<br />유연하지만 타입 불일치 가능.</td>
+<td>프로토콜 버퍼 (.proto)로 엄격한 스키마 정의. <br />컴파일 시 검증되어 타입 안전성 보장.</td>
+<td>
+<div>
+<div>GraphQL SDL로 스키마 정의. <br />스키마를 통해 질의 구조와 타입 검증, 자체 문서화 제공.</div>
+</div>
+</td>
+</tr>
+<tr>
+<td>성능 및 효율</td>
+<td><span>요청 당 오버헤드가 비교적 크고 (다중 요청 시 지연 증가)​</span><span>, 텍스트 파싱 부담. 캐싱으로 완화 가능.</span></td>
+<td><span>이진 프로토콜과 HTTP/2로 고성능, 저지연. 다수 호출도 단일 연결로 효율적 처리​</span><span>.</span></td>
+<td>
+<div>
+<div><span>필요한 데이터만 전송하여 불필요 트래픽 없음​</span><span>.<br />단일 엔드포인트 처리로 서버 부하 증가 가능, JSON 기반이라 gRPC보다는 비효율.</span></div>
+</div>
+</td>
+</tr>
+<tr>
+<td>클라이언트 지원</td>
+<td>폭넓음: 브라우저, 모바일, 임베디드 등 HTTP 가능한 어디서나 사용.</td>
+<td><span>제한적: 서버 및 네이티브 앱에서는 좋으나, 브라우저에서는 직접 호출 불가 (gRPC-Web 필요)​</span><span>.</span></td>
+<td>
+<div>
+<div>폭넓음: HTTP 사용으로 REST와 유사하게 동작하며, 전용 클라이언트 라이브러리로 생산성 향상.</div>
+</div>
+</td>
+</tr>
+<tr>
+<td>개발 생산성</td>
+<td>단순하고 바로 활용 가능. 방대한 문서/툴 지원. 변경 시 클라이언트 영향 커 버전 관리 필요.</td>
+<td>초기 설정 복잡하지만, 일단 구축 후에는 자동 생성 코드로 개발 편의 높음.양측 강제 계약으로 오류 감소. 디버깅은 어려움.</td>
+<td>
+<div>
+<div>초기 학습 필요하지만, 스키마 인트로스펙션 등으로 프론트엔드 개발 편의 높음. API 진화가 쉬워 빈번한 변경에 유연.</div>
+</div>
+</td>
+</tr>
+<tr>
+<td>주요 사용 사례</td>
+<td><span>공개 웹 API, 단순 CRUD 서비스, 광범위한 클라이언트 대상 서비스​</span><span>.<br />브라우저 캐싱 활용이 중요한 경우.</span></td>
+<td><span>마이크로서비스 내부 통신, 고성능 요구 시스템, 실시간 통신 (예: 스트리밍, 채팅)​</span><span>.<br />클라이언트-서버가 통제된 환경.</span></td>
+<td>
+<div>
+<div><span>다양한 데이터를 통합하는 게이트웨이, 복잡한 도메인의 API, 모바일 최적화 API​</span><span>.<br />클라이언트별 요구사항이 다양한 서비스.</span></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 data-end="16952" data-start="16931" data-ke-size="size23"><b>언제 어떤 기술을 선택해야 할까?</b></h3>
+<p data-end="17064" data-start="16954" data-ke-size="size16">지금까지 알아본 내용을 바탕으로, 프로젝트의 요구사항에 따라 세 가지 기술 중 무엇을 선택할지 간략히 정리해봅닌다.</p>
+<ul style="list-style-type: disc;" data-end="18278" data-start="17066" data-ke-list-type="disc">
+<li data-end="17432" data-start="17066"><b>REST를 선택:</b> 클라이언트 종류가 많고 범용적인 <b>공개 API</b>를 제공하거나, <b>간단한 CRUD</b> 위주의 서비스를 신속하게 구축해야 할 때는 REST가 적합해보입니다. REST는 브라우저를 포함한 모든 환경에서 호환되고, 학습 부담이 낮아 팀원 대부분이 익숙하며, HTTP 캐싱 등 <b>웹 표준의 이점</b>을 쉽게 활용할 수 있습니다​. 예를 들어 블로그나 뉴스 사이트처럼 데이터 변경 빈도가 낮고 캐싱을 극대화하고 싶은 경우, REST의 단순함과 캐시 제어 기능이 유용합니다​.<span></span></li>
+<li data-end="17803" data-start="17434"><b>GraphQL을 선택:</b> 클라이언트별로 필요한 데이터가 천차만별이고, 한 번의 요청으로 여러 종류의 데이터를 <b>연관지어 가져와야 하는 경우</b> GraphQL이 빛을 발합니다. 모바일 앱처럼 네트워크 환경이 제한적이거나, 다양한 화면에 맞춰 유연하게 데이터를 공급해야 한다면 GraphQL의 이점이 큽니다​. 또한 서비스 기능을 빠르게 확장하면서도 기존 API 버전을 늘리지 않고 <b>유연하게 진화</b>시키고 싶을 때 GraphQL을 고려할 수 있습니다. 단, 팀에 GraphQL 경험이 충분하고, 캐싱/모니터링 등 운영 상의 복잡성을 감당할 수 있다는 전제가 필요합니다.</li>
+<li data-end="18278" data-start="17805"><b>gRPC를 선택:</b> <b>내부 시스템</b> 간의 통신이나, 엔드투엔드 성능이 중요한 <b>마이크로서비스</b> 아키텍처에서는 gRPC가 최상의 성능을 제공할 수 있습니다​. 예를 들어 실시간 처리가 핵심인 광고 경매 시스템이나, 다수의 마이크로서비스가 밀접하게 상호 작용하는 환경에서는 gRPC의 낮은 지연 시간과 스트리밍 기능이 큰 강점입니다​. 서버와 클라이언트를 모두 제어할 수 있고, 여러 언어로 구축된 서비스 간에 효율적이고 타입 안전한 통신이 필요하다면 gRPC가 적합합니다. 다만 <b>브라우저 클라이언트</b>가 직접 호출해야 하는 공개 API라면 gRPC는 권장되지 않으며, 이 경우 REST나 GraphQL 위에 별도 게이트웨이를 두어 변환하여 제공하는 방안도 고려됩니다.</li>
+</ul>
+<p data-end="18671" data-start="18280" data-ke-size="size16">요약하면, <b>REST</b>는 단순성과 호환성 면에서 기본값에 가까운 선택이고, <b>GraphQL</b>은 유연한 데이터 질의와 클라이언트 최적화에 강점이 있으며, <b>gRPC</b>는 성능과 효율을 극대화해야 하는 환경에서 돋보입니다. 각 기술은 상호 배타적이라기보다는 상황에 따라 병행 활용되기도 합니다. 예를 들어, 마이크로서비스 내부 통신에는 gRPC를 사용하면서, 외부 공개 API 계층에는 GraphQL이나 REST로 변환해 제공하는 아키텍처도 가능합니다. 궁극적으로는 애플리케이션의 <b>특성</b>과 <b>요구사항</b>을 고려하여 가장 적합한 통신 방식을 선택하거나, 필요하다면 적절히 조합하여 사용하는 것이 중요합니다​.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>참고</b></h2>
+<p data-ke-size="size16"><b>Introduction to GraphQL: <a href="https://graphql.org/learn/" target="_blank" rel="noopener&nbsp;noreferrer">https://graphql.org/learn/</a></b></p>
+<p data-ke-size="size16"><b>PostMan, gRPC vs GrpahQL: <a href="https://blog.postman.com/grpc-vs-graphql/" target="_blank" rel="noopener&nbsp;noreferrer">https://blog.postman.com/grpc-vs-graphql/</a></b></p>
+<p data-ke-size="size16"><b>Comparing REST, gRPC, and GraphQL: <a href="https://systemdesignschool.io/blog/rest-grpc-graphql" target="_blank" rel="noopener&nbsp;noreferrer">https://systemdesignschool.io/blog/rest-grpc-graphql</a></b></p>
+<p data-ke-size="size16"><b>kong, What is GraphQL: <a href="https://konghq.com/blog/learning-center/graphql" target="_blank" rel="noopener&nbsp;noreferrer">https://konghq.com/blog/learning-center/graphql</a></b></p>
+<p data-ke-size="size16"><b>gatsby, GraphiQL: <a href="https://www.gatsbyjs.com/docs/how-to/querying-data/running-queries-with-graphiql/" target="_blank" rel="noopener&nbsp;noreferrer">https://www.gatsbyjs.com/docs/how-to/querying-data/running-queries-with-graphiql/</a></b></p>
+<p data-ke-size="size16"><b>rest arch style: <a href="https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm" target="_blank" rel="noopener&nbsp;noreferrer">https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm</a></b></p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #rest vs grpc vs graphql #rest vs grpc #grpc vs graphql 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,200 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="../assets/css/style.css" />
+    <title>FastAPI log (4) - 개선하기</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">FastAPI log (4) - 개선하기</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/FastAPI Log</p>
+                                    <p class="date">2025-03-02 15:38:39</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16"><span>이 시리즈는 AWS EKS &amp; FastAPI 환경에서 로그를 적용하는 과정을 다루고 있습니다. 전체 시리즈는 다음과 같습니다.</span></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/manage/newpost/64"><span>FastAPI&nbsp;log&nbsp;(1)&nbsp;-&nbsp;AWS&nbsp;EKS&nbsp;Fargate&nbsp;환경에서&nbsp;log&nbsp;를&nbsp;외부시스템에&nbsp;보내기</span></a></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/65"><span>FastAPI log (2) -AWS EKS Fargate, 왜 Fluent Bit 인가?</span></a></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/66">FastAPI&nbsp;log&nbsp;(3)&nbsp;-&nbsp;설계,&nbsp;구현</a></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/75">FastAPI log (4) - 개선하기</a></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<p data-ke-size="size16"><a href="https://probehub.tistory.com/66" target="_blank" rel="noopener"><b>이전 글</b></a>에서 FsatAPI 의 request, stacktrace를 logging 하는 <span style="color: #333333; text-align: start;">Middleware 를 만들었습니다. 하지만 이러한 구현 접근에는 결정적인 오류와 개선사항이 있습니다.</span><span style="color: #333333; text-align: start;"></span></p>
+<h2 data-ke-size="size26"><b><span style="color: #333333; text-align: start;">오류</span></b></h2>
+<p data-ke-size="size16"><span style="color: #333333; text-align: start;">결정적인 오류는 Middleware 에서 Exception 을 catch 하고 있다는 점입니다. </span><span style="color: #333333; text-align: start;">FastAPI 의 기본 middleware chain 을 고려하지 않은 접근이기 때문에 문제가 됩니다. </span><span style="color: #333333; text-align: start;">간단히 이야기하자면, FastAPI 에서는 처리 되지 않은 Exception 에 대한 책임을 다른 Middleware 에게 위임하고 있는데, 중간에 Logging 책임을 지는 Middleware 가 Exception 을 처리하고 있는 것이지요.<span style="color: #333333; text-align: start;">(이에 대해서는<span>&nbsp;</span></span><b><a style="color: #0070d1; text-align: start;" href="https://probehub.tistory.com/68#%EB%AC%B8%EC%A0%9C%EC%9D%98%20%EC%9B%90%EC%9D%B8-1">CORS Middleware 에서 발생하는 문제를 분석</a></b>할때 다뤘습니다.)</span></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><b>따라서 Exception 을 처리하는 부분이 제외되어야 합니다.</b></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>개선 사항</b></h2>
+<h3 data-ke-size="size23"><b>BsaeHTTPMiddelware 사용</b></h3>
+<p data-ke-size="size16">Starlette 에서 제공하는 BsaeHttpMiddleware 는 성능상 불이익이 있습니다. 대신 <a href="https://www.starlette.io/middleware/#pure-asgi-middleware" target="_blank" rel="noopener">Pure ASGI Middleware</a> 로 구현되어야 합니다.</p>
+<p data-ke-size="size16">CORSMiddleware 문제를 해결하기 위해 <a href="https://asgi.readthedocs.io/en/latest/specs/main.html#middleware" target="_blank" rel="noopener">ASGI Spec</a> 을 공부한 저에게는 조금 기대되는 작업입니다.</p>
+<h3 data-ke-size="size23"><b><span style="color: #333333; text-align: start;">확장성 부족</span></b></h3>
+<p data-ke-size="size16">이전 글에서는 로깅 라이브러리 레퍼런스를 알아본다고 고작 python-json-logger 정도를 알아봤습니다. 하지만, 엘라스틱 서치에서 공통 로깅사양을 구현한 <a href="https://github.com/elastic/ecs-logging-python" target="_blank" rel="noopener">python 라이브러리</a>가 있다는 것을 이제 막 발견했습니다. 이 코드를 침고하여 더 확장서있는 middleware 를 만들 수 있을 것 같습니다.</p>
+<h3 data-ke-size="size23"><b>결합도가 높음</b></h3>
+<p data-ke-size="size16">이전 버전은 middleware 자체의 기능보다는 전체 어플리케이션에서의 사용에 초점을 맞췄습니다. 그러한 이유로 여러 환경변수를 통해 logger 를 가져오고, stack_trace 를 출력하고 등의 행위를 제한했습니다. 그런데 이제보니 이러한 행위는 파이썬답지 못하며 middleware 에 집중된 행위가 아닙니다. 불필요한 외부 참조를 제거하고 middleware 내부에만 집중해야합니다.</p>
+<h3 data-ke-size="size23"><b>개선 적용</b></h3>
+<p data-ke-size="size16"><b>전체 코드 결과물은 <a href="https://github.com/timothy-jeong/fastapi-logging-example" target="_blank" rel="noopener">github</a> 에서 확인할 수 있습니다.</b></p>
+<pre id="code_1740906093089" class="python" data-ke-language="python" data-ke-type="codeblock"><code>import logging
+import time
+import uuid
+import json
+
+from starlette.types import ASGIApp, Message, Scope, Receive, Send
+
+class JsonRequestLoggerMiddleware:
+    def __init__(
+        self, app: ASGIApp,
+        error_info_name: str = "error_info",
+        error_info_mapping: dict[str, str] | None = None,
+        event_id_header: str | None = None,
+        client_ip_headers: list[str] | None = None,
+        logger: logging.Logger | None = None,
+    ) -&gt; None:
+        """
+        Initializes the JSON Request Logger Middleware.
+
+        Args:
+            app (ASGIApp): The ASGI application instance to wrap.
+            error_info_name (str, optional): The key name in the request state from which to extract error information.
+                Defaults to "error_info".
+            error_info_mapping (dict[str, str] | None, optional): A dictionary mapping error information keys (from the request
+                state) to desired log field names. For example, {"code": "error_code", "message": "error_message"}.
+                Defaults to None.
+            event_id_header (str | None, optional): The HTTP header name to extract an event ID from. If not provided or if the header
+                is missing, a new UUID will be generated. Defaults to None.
+            client_ip_headers (list[str] | None, optional): A list of HTTP header names to check for the client IP address,
+                in order of priority. If none are provided, the client IP will be obtained from the scope's "client" value.
+                Defaults to None.
+            logger (logging.Logger | None, optional): A custom logger to use for logging requests. If not provided, a default
+                logger with INFO level is created. Defaults to None.
+        """
+        self.app = app
+        self.error_info_name = error_info_name
+        self.error_info_mapping = error_info_mapping or {
+            "code": "error_code",
+            "message": "error_message",
+            "stack_trace": "stack_trace",
+        }
+        self.event_id_header = event_id_header
+        self.client_ip_headers = client_ip_headers or ["x-forwarded-for", "x-real-ip"]
+        # logger setting
+        if logger:
+            self.logger = logger
+        else:
+            logger = logging.getLogger("request-logger")
+            logger.setLevel(logging.INFO)
+            if logger.hasHandlers():
+                logger.handlers.clear()
+            stream_handler = logging.StreamHandler()
+            stream_handler.setLevel(logging.INFO)
+            formatter = logging.Formatter("%(message)s")  
+            stream_handler.setFormatter(formatter)
+            logger.addHandler(stream_handler)
+            logger.propagate = False
+            self.logger = logger
+            
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -&gt; None:
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        start_time = time.time()
+        
+        # parse header
+        headers = {k.decode("latin1"): v.decode("latin1") for k, v in scope.get("headers", [])}
+        # event_id
+        if self.event_id_header and self.event_id_header in headers:
+            event_id = headers[self.event_id_header]
+        else:
+            event_id = str(uuid.uuid4())
+            
+        # extract client ip from client_ip_headers
+        client_ip = None
+        for header in self.client_ip_headers:
+            if header in headers:
+                # X-Forwarded-For case
+                client_ip = headers[header].split(",")[0].strip()
+                break
+        if not client_ip:
+            client_ip = scope.get("client", ("unknown",))[0]
+                        
+        # default log data
+        log_data = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ", time.gmtime()),
+            "event_id": event_id,
+            "method": scope.get("method"),
+            "path": scope.get("path"),
+            "client_ip": client_ip,
+            "user_agent": headers.get("user-agent"),
+        }
+
+        response_status_code = None
+
+        async def send_wrapper(message: Message) -&gt; None:
+            nonlocal response_status_code
+            if message["type"] == "http.response.start":
+                response_status_code = message.get("status")
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+        
+        time_taken_ms = int((time.time() - start_time) * 1000)
+        
+        # based on response status_code
+        if response_status_code is None:
+            response_status_code = 500
+        log_type = "access" if response_status_code &lt; 400 else "error"
+        log_level = "ERROR" if response_status_code &gt;= 400 else "INFO"
+                
+        # error log data
+        
+        error_info = scope.get("state", {}).get(self.error_info_name, None)
+        if not error_info:
+            log_data.update({"error": None})
+        if error_info:
+            log_data.update({"error": {}})
+            for src_key, dest_key in self.error_info_mapping.items():
+                log_data["error"][dest_key] = error_info.get(src_key)            
+        
+        # log data update
+        log_data.update({
+            "time_taken_ms": time_taken_ms,
+            "status_code": response_status_code,
+            "log_type": log_type,
+            "level": log_level,
+        })     
+        
+        log_level_int = logging.getLevelNamesMapping()[log_level]
+        self.logger.log(log_level_int, json.dumps(log_data, ensure_ascii=False))</code></pre>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26">참고</h2>
+<p data-ke-size="size16">FastAPI Tips: <a href="https://github.com/Kludex/fastapi-tips" target="_blank" rel="noopener&nbsp;noreferrer">https://github.com/Kludex/fastapi-tips</a></p>
+<p data-ke-size="size16">ecs-logging: <a href="https://github.com/elastic/ecs-logging-python" target="_blank" rel="noopener&nbsp;noreferrer">https://github.com/elastic/ecs-logging-python</a></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #fastapi logging #fastapi json 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

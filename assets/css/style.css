@@ -1409,27 +1409,6 @@ body {
     max-width: none;
 }
 
-/*
-.wrap-drawer,
-  .wrap-drawerbottom {
-    width: 1064px;
-    overflow-x: auto;
-	}
-  .wrap-right,
-  .wrap-left {
-    width: 1120px;
-	}
-
-	.wrap-drawer.outline-use,
-  .wrap-drawerbottom.outline-use {
-    width: 1184px;
-    overflow-x: auto; }
-  .wrap-right.outline-use,
-  .wrap-left.outline-use {
-    width: 1240px;
-    overflow-x: auto; }
-*/
-
 /* media query - mobile */
 @media screen and (max-width: 1060px) {
     .wrap-drawer,

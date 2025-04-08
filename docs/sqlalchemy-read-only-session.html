@@ -1,0 +1,121 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="../assets/css/style.css" />
+    <title>SQLAlchemy read-only session</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">SQLAlchemy read-only session</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/개발 탐구</p>
+                                    <p class="date">2025-02-22 17:33:24</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="720" height="360" >
+    <span data-lightbox="lightbox">
+        <img src="../assets/img/sqlalchemy/SQLAlchemy.webp" width="720" height="360"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><a href="https://stackoverflow.com/questions/79439390/does-sqlalchemy-automatically-create-a-transaction-for-read-only-operations/79448689#79448689" target="_blank" rel="noopener">SQLAlchemy 도 Spring의 Transaction 처럼 read-only 를 만드는 기능이 있는지 물어보는 질문</a>이 있었습니다. 이 글의 답변에도 작성했지만, 저도 SpringBoot 를 사용할때는 Transaction 격리수준, 전파수준 등을 엄청 신경썼었는데 FastAPI&amp;SQLAlchemy 를 사용하면서 한번도 이런 고민을 안했습니다.</p>
+<p data-ke-size="size16">이게 개별 <b>비즈니스 로직을 간단하게 유지할 수밖에 없는 프레임워크의 장점아닌 장점</b>이라고 생각하면서 SQLAlchemy 에서 read-only transaction 을 만드는 방법을 알아보았습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<figure id="og_1740213156290" contenteditable="false" data-ke-type="opengraph" data-ke-align="alignCenter" data-og-type="website" data-og-title="Does SQLAlchemy automatically create a transaction for read-only operations?" data-og-description="I am currently learning backend development using FastAPI + SQLAlchemy, and I have a question regarding transaction handling in SQLAlchemy. While reading the official SQLAlchemy documentation, I came" data-og-host="stackoverflow.com" data-og-source-url="https://stackoverflow.com/questions/79439390/does-sqlalchemy-automatically-create-a-transaction-for-read-only-operations/79448689#79448689" data-og-url="https://stackoverflow.com/questions/79439390/does-sqlalchemy-automatically-create-a-transaction-for-read-only-operations" data-og-image="https://scrap.kakaocdn.net/dn/ciMlFs/hyYjAVpxzR/z6ys4E9Ekb1tch7KmEjUA1/img.png?width=316&amp;height=316&amp;face=0_0_316_316"><a href="https://stackoverflow.com/questions/79439390/does-sqlalchemy-automatically-create-a-transaction-for-read-only-operations/79448689#79448689" target="_blank" rel="noopener" data-source-url="https://stackoverflow.com/questions/79439390/does-sqlalchemy-automatically-create-a-transaction-for-read-only-operations/79448689#79448689">
+<div class="og-image" style="background-image: url('https://scrap.kakaocdn.net/dn/ciMlFs/hyYjAVpxzR/z6ys4E9Ekb1tch7KmEjUA1/img.png?width=316&amp;height=316&amp;face=0_0_316_316');">&nbsp;</div>
+<div class="og-text">
+<p class="og-title" data-ke-size="size16">Does SQLAlchemy automatically create a transaction for read-only operations?</p>
+<p class="og-desc" data-ke-size="size16">I am currently learning backend development using FastAPI + SQLAlchemy, and I have a question regarding transaction handling in SQLAlchemy. While reading the official SQLAlchemy documentation, I came</p>
+<p class="og-host" data-ke-size="size16">stackoverflow.com</p>
+</div>
+</a></figure>
+<p data-ke-size="size16">&nbsp;</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h3 data-ke-size="size23"><b>해결방법</b></h3>
+<p data-ke-size="size16"><b>왠만한 고민에 대한 해답은(특히 소프트웨어 개발 영역에서) 인터넷에 있기 마련</b>입니다. 보통 stackoverflow 에 질문을 올리는 사람들은 인터넷에서 답을 찾지 못한 경우가 많은데 이번 질문은 github issue 를 찾아봤다면 답을 알 수 있는 질문이었습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">SQLAlchemy issue 에 비슷한 질문이 있었고, maintainer 는 공식적으로 read-only transaction 을 만드는 방법이 제공되진 않지만 SQLAlchemy 에서 제공하는 <a href="https://docs.sqlalchemy.org/en/20/orm/events.html#sqlalchemy.orm.SessionEvents" target="_blank" rel="noopener">events</a> 를 이용해서 충분히 구현이 가능합니다.</p>
+<pre id="code_1740213077796" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from sqlalchemy import create_engine, Column, Integer, String, event
+from sqlalchemy.orm import Session, sessionmaker, declarative_base
+
+# Define the base and ORM model.
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    
+    def __repr__(self):
+        return self.name
+
+# Utility functions to mark a session as read-only.
+def set_read_only(session: Session, read_only: bool = True):
+    session.info['read_only'] = read_only
+
+def is_read_only(session: Session) -&gt; bool:
+    return session.info.get('read_only', False)
+
+# Listen for before_flush event and prevent flushing if session is read-only.
+@event.listens_for(Session, "before_flush")
+def before_flush(session, flush_context, instances):
+    if is_read_only(session):
+        raise Exception("Read-only session: flush not allowed")
+
+# Setup the database and create a session.
+if __name__ == "__main__":
+    engine = create_engine("sqlite:///:memory:")
+    SessionLocal = sessionmaker(bind=engine)
+    
+    # Create tables.
+    Base.metadata.create_all(engine)
+    
+    # Get Session
+    session = SessionLocal()
+    
+    # normal Session ()
+    new_user = User(name="Alice")
+    session.add(new_user)
+
+    users = session.query(User).all()
+    print("Users:", users)    
+    session.commit()    
+    
+    # read-only Session ()
+    set_read_only(session, True)  # Mark session as read-only
+    
+    new_user = User(name="James")
+    session.add(new_user)
+    
+    users = session.query(User).all()
+    print("Users:", users)    
+    session.commit()</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">Spring 에서는 read-only Transaction 을 만들어서 약간의 성능상 이점을 얻을 수도 있었지만, SQLAlchemy 에서는 그런 성능상 이점을 기대할 수 있을지는 모르겠습니다.</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #sqlalchemy read-only #sqlalchemy readonly #sqlalchemy readonly session #sqlalchemy read-only session 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

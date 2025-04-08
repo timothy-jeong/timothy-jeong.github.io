@@ -1,0 +1,446 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>python gRPC (2) - 기본 구조와 python 구현</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">python gRPC (2) - 기본 구조와 python 구현</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/python gRPC</p>
+                                    <p class="date">2025-03-08 22:01:47</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="280" height="280" >
+    <span data-lightbox="lightbox">
+        <img src="../assets/img/grpc_in_python/thumb.webp" width="280" height="280"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">지난글에서 RPC (gRPC) 를 선택한 이유를 알아봤습니다. 이제는 python 에서 어떻게 gRPC 를 사용할 수 있는지 공유하겠습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>.proto 파일</b></h2>
+<p data-ke-size="size16">RPC는 엄격한 규칙을 따르기 때문에 <b>IDL(Interface Definication Language)</b>이 제공됩니다. 특히 구글에서 만들고 배포하는 gRPC는 관련 문서와 tool이 잘 구비되어 있어서 구현하기 용이합니다. gRPC를 구현하기 위해 가장 먼저 해야할 것은 서버와 메시지 규약을 정하는것입니다. 이러한 규약은 <b>.proto</b> 파일에 정의됩니다.</p>
+<h3 data-ke-size="size23"><b>Service 와 Message</b></h3>
+<p data-ke-size="size16">gRPC는 <a href="https://grpc.io/docs/what-is-grpc/core-concepts/#service-definition" target="_blank" rel="noopener">Service</a>를 통해서 호출될 함수를 정의하고, Message 를 통해서 호출 파라미터, 응답 값을 정의합니다.</p>
+<p data-ke-size="size16">아래 예제는 <a href="https://protobuf.dev/best-practices/1-1-1/" target="_blank" rel="noopener">protobuf bestpractice 1-1-1 rule</a> 에 따라 message 별로 파일을 나누고, 각 message 파일을 service 파일에서 import 하여 정의하고 있습니다:</p>
+<pre id="code_1741615857302" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>syntax = "proto3";
+
+package hello;
+
+import message/hello_request.proto
+import message/hello_response.proto
+
+service HelloService {
+  rpc SayHello (HelloRequest) returns (HelloResponse);
+}</code></pre>
+<pre id="code_1741616328354" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>syntax = "proto3";
+
+package hello;
+
+message HelloRequest {
+  string greeting = 1;
+  // data_type | filed_name | tag_number
+}</code></pre>
+<pre id="code_1741616635463" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>syntax = "proto3";
+
+package hello;
+
+message HelloResponse {
+  string reply = 1;
+  // data_type | filed_name | tag_number  
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">위에서 말한걸 다시 정리하자면,</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>service: 클라이언트가 호출할 수 있는 원격 메서드 집합</b></li>
+<li><b>message: <b>클라이언트와 서버 간에 주고받는 데이터 구조</b>를 정의하는 개념</b></li>
+</ul>
+<p data-ke-size="size16">하지만 package, 그리고 field 옆에 있는 숫자는 무엇인지 설명되지 않았습니다. protocol buffers 문서에서 그 답을 얻어보겠습니다.</p>
+<h3 data-ke-size="size23"><b>Protocol buffers</b></h3>
+<p data-ke-size="size16">우선 <a href="https://protobuf.dev/" target="_blank" rel="noopener">protocol buffer</a> 란 gRPC 에서 활용되는 IDL이면서 하나의 데이터 직렬화 매커니즘입니다. 줄여서 protobuf, 혹은 pb라고도 합니다. 하나의 언어체계인만큼 위에서 언급된 package, tag number(filed 옆 숫자) 는 pb 만의 특수한 약속입니다. pb 를 사용하면서 알아두면 유용한 개념을 정리하겠습니다.</p>
+<h4 data-ke-size="size20"><b>package</b></h4>
+<p data-ke-size="size16">namespace 를 정의합니다. 동일한 이름의 Service, Message 일지라도 namespace 가 다르면 gRPC 내부적으로 다르게 취급됩니다.</p>
+<h4 data-ke-size="size20"><b>tag number</b></h4>
+<p data-ke-size="size16">필드를 식별하는 고유한 식별자입니다. json 이 데이터 타입을 정의할때 전체 필드이름을 사용하는것과 달리 pb 는 이 tag number 를 이용해서 필드를 특정합니다. <b>덕분에 json에 비해 더 경량화된 데이터 구조</b>를 가질 수 있게 됩니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">tag number 를 기준으로 필드를 구분하기 때문에 동일한 tag number 에 대해서 다른 필드를 정의하면 예상치 못한 동작을 초리할 수 있습니다. <a href="https://protobuf.dev/best-practices/dos-donts/" target="_blank" rel="noopener">즉, 한번 폐기된 tag number 를 재사용하는 것은 엄격히 금지</a>됩니다.</p>
+<h4 data-ke-size="size20"><b>데이터 타입</b></h4>
+<p data-ke-size="size16">위의 예제에서는 오로지 string 타입만 나와있지만, gRPC 는 다양한 데이터 타입을 지원합니다. 모든 내용을 블로그로 옮겨오는것은 비효율적이기 때문에 <a href="https://protobuf.dev/programming-guides/proto3/#scalar" target="_blank" rel="noopener">pb의 scala type 에 대한 링크</a>를 남겨두겠습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b><b>gRPC 의 구조</b></b></h2>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="../assets/img/grpc_in_python/landing-2.webp"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">위 그림은 구글에서 제공하는 gRPC의 도식입니다. gRPC Server 에서 각 gRPC Stub 과 Proto Request, Response 를 주고 받는것을 알 수 있습니다. 이제 각각이 무엇인지 간단히 정리하겠습니다.</p>
+<h3 data-ke-size="size23"><b><b>server</b></b><b><b></b></b></h3>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li data-end="128" data-start="65"><b>gRPC 서버</b>는 클라이언트가 호출할 수 있는 원격 프로시저(RPC)를 정의하고 처리하는 역할을 합니다.</li>
+<li data-end="185" data-start="129">proto 파일에서 정의한 <b>service</b>를 구현하여 요청을 처리하고 응답을 반환합니다.</li>
+<li data-end="249" data-start="186">보통 <b>멀티스레딩을 지원하는 고성능 서버</b>로 동작하며, HTTP/2 기반의 스트리밍을 사용할 수 있습니다.</li>
+</ul>
+<h3 data-ke-size="size23"><b>stub</b></h3>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li data-end="945" data-start="890">Stub(스텁)은 <b>클라이언트와 서버 간의 gRPC 요청을 중개하는 역할</b>을 합니다.</li>
+<li data-end="945" data-start="890">server와 stub은 동일한, 혹은 적어도 이전버전과 호환되는(Backwards-compatibility) proto 파일을 기반으로 통신해야합니다.</li>
+<li data-end="1014" data-start="946">클라이언트에서 <b>서버를 호출하는 객체</b>이며, 서버의 원격 메서드를 <b>로컬 메서드처럼 호출</b>할 수 있도록 합니다.</li>
+<li data-end="1076" data-start="1015">Stub에는 <b>Blocking(동기)</b>, <b>Non-Blocking(비동기)</b> 두 가지 유형이 있습니다.</li>
+</ul>
+<h3 style="color: #000000; text-align: start;" data-ke-size="size23"><b><b>channel</b></b></h3>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li data-end="1961" data-start="1910">Channel(채널)은 <b>클라이언트와 서버 간의 연결을 담당하는 객체</b>입니다.</li>
+<li data-end="2024" data-start="1962">gRPC는 HTTP/2 기반이므로, 하나의 Channel에서 여러 개의 gRPC 호출을 수행할 수 있습니다.</li>
+<li data-end="2083" data-start="2025">보통 <b>TLS(보안)</b> 또는 <b>플레인 텍스트(일반 HTTP/2)</b> 연결을 설정할 수 있습니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-style="style5" data-ke-type="horizontalRule" />
+<h2 data-ke-size="size26"><b>Python과 gRPC</b></h2>
+<p data-ke-size="size16">이제 proto 파일의 존재와, server, stub 그리고 channel 의 개념을 알았습니다. 이제는&nbsp;<b>Python에서 gRPC 서버를 구현하는 방법</b>과 <b>Python만의 특징</b>을 살펴보겠습니다.</p>
+<h3 data-ke-size="size23"><b>Python의 gRPC 특징</b></h3>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>Python에서는 grpcio-tools를 사용하여 proto 파일을 컴파일할 필요 없이&nbsp;런타임에 동적으로 스텁을 생성할 수 있습니다.</li>
+<li>Python의 asyncio를 활용한 비동기 gRPC 서버/클라이언트를 쉽게 구현할 수 있습니다. <a href="https://grpc.io/docs/guides/performance/#python" target="_blank" rel="noopener">반면 Stream을 사용하는 것은 권장되지 않습니다.</a>&nbsp;</li>
+<li>Python에서는 다른 언어보다 더 간결하게 gRPC를 구현할 수 있으며, 클래스를 직접 상속받아 서비스 구현을 할 수 있습니다. 또한 <a href="https://github.com/grpc/grpc/blob/master/examples/python/helloworld/greeter_server_with_reflection.py" target="_blank" rel="noopener">Reflection API를 지원</a>하기 때문에 gRPC 서비스를 동적으로 사용할 수 있습니다.</li>
+</ul>
+<p data-ke-size="size16">요약하자면, Python에서 gRPC를 이용하는 것은 쉽지만 Stream 을 이용하기 보다는 asyncio 를 직접 이용하는 방안을 채택해야합니다.</p>
+<h3 data-ke-size="size23"><b>Python gRPC 서버 구축 (gRPC Tools 활용)</b></h3>
+<p data-ke-size="size16">지금까지 정리한 개념을 통해 python 코드에서 gRPC를 세팅하려면 어떻게 해야하는지 명확해진것 같습니다.</p>
+<ol style="list-style-type: decimal;" data-ke-list-type="decimal">
+<li>proto 파일이 있어야하며</li>
+<li><a style="background-color: #e6f5ff; color: #0070d1; text-align: start;" href="https://github.com/grpc/grpc/tree/master/tools/distrib/python/grpcio_tools">grcpio_tools</a><span style="color: #333333; text-align: start;"><span> 을 이용하여 python 에서 gRPC를 구현할떄 필요한 protobuf 파일들을 생성합니다.</span></span></li>
+<li>protobuf 파일을 기반으로 gRPC server 가 정의되어야 하고</li>
+<li>protobuf 파일을 기반으로 gRPC stub 을 클라이언트가 활용해야합니다.</li>
+</ol>
+<p data-ke-size="size16">전체 완성 코드는 <a href="https://github.com/timothy-jeong/python-grpc-example/tree/simple-example" target="_blank" rel="noopener">github</a> 에서 확인할 수 있습니다.</p>
+<h4 data-ke-size="size20"><b>1. proto 파일 작성</b></h4>
+<p data-ke-size="size16">첫번째로 proto 파일을 만들어보겠습니다. 아래와 같은 구조로 proto 파일은 service 와 message 를 분리해둘겁니다.</p>
+<pre id="code_1742098812917" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>.
+├── proto
+│   ├── member_service.proto
+│   └── message
+│       ├── member_request.proto
+│       └── member_response.proto</code></pre>
+<p data-ke-size="size16">각각의 message 를 먼저 만들고,</p>
+<pre id="code_1742098864871" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>syntax = "proto3";
+
+package member;
+
+
+message MemberRequest {
+    string member_id = 1;
+}</code></pre>
+<pre id="code_1742098875180" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>syntax = "proto3";
+
+package member;
+
+
+message MemberResponse {
+    string member_id = 1;
+    string member_name = 2;
+}</code></pre>
+<p data-ke-size="size16">service 를 정의해줍니다.</p>
+<pre id="code_1742098902561" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>syntax = "proto3";
+
+package member;
+
+import "message/member_request.proto";
+import "message/member_response.proto";
+
+service MemberService {
+    rpc GetMember (MemberRequest) returns (MemberResponse);
+}</code></pre>
+<h4 data-ke-size="size20"><b>2. grpcio_tools 활용</b></h4>
+<p data-ke-size="size16">grpcio_tools 는 정의해둔 proto 파일을 통해 python에서 활용 가능한 protobuf 파일을 만들어줍니다. 이때 참 주의할 사항이 많습니다.</p>
+<ol style="list-style-type: decimal;" data-ke-list-type="decimal">
+<li><b>service 파일이 참조하는 message 파일의 구조가 python 파일 구조에도 그대로 반영되어야 합니다.</b></li>
+<li><b>생성된 protobuf 파이썬 파일의 위치에 따라 활용 의도가 달라지며, python 실행 컨텍스트로 고려되어야 합니다.</b></li>
+</ol>
+<p data-ke-size="size16">저는 이번 예제에서 app 밑에 pb 를 두는 구조를 선택했습니다.</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>app 에서 정의한 기능(비즈니스 로직, DB 연결) 을 공유하려면 app 밑에서 grpc 를 정의하는게 유리하다고 생각했습니다.</li>
+<li>또한 pb 밑에 message 디렉터리를 두어서 service 가 message 를 참조하는 구조를 그대로 모방하도록 했습니다.</li>
+</ul>
+<pre id="code_1742099309442" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>.
+├── proto
+│   ├── member_service.proto
+│   └── message
+│       ├── member_request.proto
+│       └── member_response.proto
+└── services
+    ├── board_service
+    │   ├── app
+    │   │   ├── main.py
+    │   │   └── pb
+    │   │       └── message
+    │   ├── proto.sh
+    └── member_service
+        ├── app
+        │   ├── grpc_server.py
+        │   ├── main.py
+        │   └── pb
+        │       └── message</code></pre>
+<p data-ke-size="size16">이제는 grpc_tools 를 이용해보겠습니다. 우선 pip install grpc_tools 를 해주세요.&nbsp;</p>
+<p data-ke-size="size16">그리고 각 서비스마다 다음의 스크립트를 만들어두고, 실행하겠습니다. service 와 message 를 따로따로 긁어와줍니다.</p>
+<pre id="code_1742099167329" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>#!/bin/bash
+
+set -e
+
+python -m grpc_tools.protoc \
+  -I=../../proto \
+  --python_out=./app/pb \
+  --grpc_python_out=./app/pb \
+  --pyi_out=./app/pb \
+  ../../proto/member_service.proto
+
+python -m grpc_tools.protoc \
+  -I=../../proto \
+  --python_out=./app/pb \
+  --grpc_python_out=./app/pb \
+  --pyi_out=./app/pb \
+  ../../proto/message/*.proto</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이 스크립트에 대해서 러프하게 설명하자면,</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li data-start="53" data-end="129"><b>입력 경로 지정(-I):</b>
+<ul style="list-style-type: disc;" data-ke-list-type="disc" data-start="77" data-end="129">
+<li data-start="77" data-end="129">-I=../../proto 옵션은 proto 파일들이 위치한 디렉토리를 지정합니다.</li>
+</ul>
+</li>
+<li data-start="130" data-end="333"><b>Python 메시지 파일 생성(--python_out):</b>
+<ul style="list-style-type: disc;" data-ke-list-type="disc" data-start="172" data-end="333">
+<li data-start="172" data-end="276">이 옵션은 proto 파일의 메시지 정의를 기반으로 Python 코드를 생성하여 지정된 경로(여기서는 ./app/pb)에 &lt;proto파일명&gt;_pb2.py 파일을 생성합니다.</li>
+</ul>
+</li>
+<li data-start="334" data-end="459"><b>gRPC 관련 파일 생성(--grpc_python_out):</b>
+<ul style="list-style-type: disc;" data-ke-list-type="disc" data-start="378" data-end="459">
+<li data-start="378" data-end="459">이 옵션은 gRPC 서비스 인터페이스에 대한 코드를 생성하여 &lt;proto파일명&gt;_pb2_grpc.py 파일을 같은 출력 경로에 생성합니다.</li>
+</ul>
+</li>
+<li data-start="460" data-end="592"><b>Python 타입 스텁 생성(--pyi_out):</b>
+<ul style="list-style-type: disc;" data-ke-list-type="disc" data-start="498" data-end="592">
+<li data-start="498" data-end="592">이 옵션은 생성된 메시지에 대한 정적 타입 검사용 stub 파일 (.pyi)을 생성합니다. 이를 통해 Python 코드 작성 시<b><span>&nbsp;</span>타입 힌트</b>를 활용할 수 있습니다.</li>
+<li data-start="498" data-end="592">개인적으로 이게 정말 중요합니다. gRPC 타입 힌트 유무에 따라 개발 난이도와 런타임 오류 빈도가 많이 달라질겁니다.</li>
+</ul>
+</li>
+<li data-start="593" data-end="667"><b>마지막 인자로 proto 파일 지정:</b>
+<ul style="list-style-type: disc;" data-ke-list-type="disc" data-start="624" data-end="667">
+<li data-start="624" data-end="667">스크립트의 마지막 부분에서 실제로 컴파일할 proto 파일들을 지정합니다.</li>
+</ul>
+</li>
+</ul>
+<p style="color: #333333; text-align: start;" data-ke-size="size14">더 자세한 설명은<span>&nbsp;</span><a style="font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Apple SD Gothic Neo', Arial, sans-serif; letter-spacing: 0px;" href="https://protobuf.dev/reference/python/python-generated/">공식문서</a><span style="font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Apple SD Gothic Neo', Arial, sans-serif; letter-spacing: 0px;">에서 확인하실 수 있습니다.&nbsp;</span></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style1" />
+<p data-ke-size="size16">이제는 pb 밑에 다양한 파일들이 생성되었지만, 대표적으로 3가지만 살펴보겠습니다.</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>member_service_pb2.py</li>
+<li>member_service_pb2_grpc.py</li>
+<li>member_response_pb.pyi</li>
+</ul>
+<p data-ke-size="size16"><b><span style="color: #333333; text-align: start;">member_service_pb2 와&nbsp; member_service_pb2_grpc 의 차이는 뭘까요?</span></b></p>
+<p data-ke-size="size16"><span style="color: #333333; text-align: start;">직관적으로 pb2는 protocol buffer 를 위한 python 구현체일것이고, grpc는 그러한 pb2를 이용한 grpc 구현체일것이라고 알 수 있을 것입니다. 조금만 더 파고들어서 message 내부를 보면 더 명확해지죠. 이러한 직관 말고 내부 코드를 조금 살펴보겠습니다.</span></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style1" />
+<p data-ke-size="size16"><b>member_service_pb2</b></p>
+<pre id="code_1742100216122" class="python" data-ke-language="python" data-ke-type="codeblock"><code># ...
+
+_sym_db = _symbol_database.Default()
+
+
+from message import member_request_pb2 as message_dot_member__request__pb2
+from message import member_response_pb2 as message_dot_member__response__pb2
+
+
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14member_service.proto\x12\x06member\x1a\x1cmessage/member_request.proto\x1a\x1dmessage/member_response.proto2K\n\rMemberService\x12:\n\tGetMember\x12\x15.member.MemberRequest\x1a\x16.member.MemberResponseb\x06proto3')
+
+_globals = globals()
+_builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'member_service_pb2', _globals)
+if not _descriptor._USE_C_DESCRIPTORS:
+  DESCRIPTOR._loaded_options = None
+  _globals['_MEMBERSERVICE']._serialized_start=93
+  _globals['_MEMBERSERVICE']._serialized_end=168
+# @@protoc_insertion_point(module_scope)</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">다소 생소한 개념이 보입니다. 얼추 보았을떄 pb 파이썬 구현체에서는 <b>descriptor</b>가 중요한것 같습니다. 다소 생소한 개념이기 때문에 엄밀하게 정의하고 세부 동작을 파악하는 일은 다음으로 미루고 <b>우선 직관적으로 이해하고 넘어가겠습니다.</b></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">pb에서 <b>descriptior는 pb에서 정의된 데이터 타입에 대한 메타데이터를 설명하는 역할</b>을 합니다.</p>
+<p data-ke-size="size16">그리고&nbsp;<b>member_service_pb2&nbsp;</b>파일은 descriptor pool 에 정의된 proto를 추가하고 (AddSerializedFile), 이러한 pool 을 전역적으로 build 하는 역할을 한다고 이해할 수 있습니다.</p>
+<p data-ke-size="size16">이러한 작업을 통해 proto로 정의된 메타데이터가 python에서 다룰 수 있는 무언가가 되는것이라고 이해하면 되겠습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style1" />
+<p data-ke-size="size16"><b>member_service_pb2_grpc</b></p>
+<pre id="code_1742102104207" class="python" data-ke-language="python" data-ke-type="codeblock"><code># ...
+
+class MemberServiceStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.GetMember = channel.unary_unary(
+                '/member.MemberService/GetMember',
+                request_serializer=message_dot_member__request__pb2.MemberRequest.SerializeToString,
+                response_deserializer=message_dot_member__response__pb2.MemberResponse.FromString,
+                _registered_method=True)
+
+
+class MemberServiceServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def GetMember(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_MemberServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'GetMember': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMember,
+                    request_deserializer=message_dot_member__request__pb2.MemberRequest.FromString,
+                    response_serializer=message_dot_member__response__pb2.MemberResponse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'member.MemberService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('member.MemberService', rpc_method_handlers)</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">grpc 영역으로 넘어오니 조금 익숙한 개념이 보입니다. servicer, channel, stub 이 그것입니다. 이 글의 목적이 python에서 grpc를 사용하는 기본적인 방법을 공유하는 것이기 때문에 여기서도 직관적으로 이해하고 넘어가겠습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">MemberServiceStub은 proto 파일에서 정의한 service를 끌어다 쓰는 클라이언트쪽에서 사용할 것이고, 각 요청을 클래스 수준에서 멤버변수로 갖게 된다는것을 알 수 있습니다.(특히 여기서는 <a href="https://grpc.io/docs/what-is-grpc/core-concepts/#unary-rpc" target="_blank" rel="noopener">단항요청</a>으로 구성되어 있습니다.)</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">MemberServiceServicer 는 proto 파일에서 정의한 service 를 정의하는 서버쪽에서 사용할 것이고, 각 요청이 함수로 정의되어 있다는 것을 알 수 있습니다. context 파라미터를 이용하여 마치 HTTP 에서 상태코드를 정의하듯이 활용할 수 있습니다,</p>
+<p data-ke-size="size16">add_MemberServiceServicer_to_server 함수를 보면, rpc 핸들러를 정의하고, 이를 등록하는 과정이 있음을 알 수 있습니다. 이상을 통해 gRPC 서버를 정의할때 활용되어야 한다는 것을 알 수 있습니다.</p>
+<p data-ke-size="size16">단순히 생각하면 Servicer 에서 해당 함수를 고쳐서 grpc 서버 기능을 구현하고 싶지만 <b>protoc에 의해 생성된 코드를 임의로 고치는 것은 권장되지 않습니다.</b></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style1" />
+<p data-ke-size="size16"><b>member_response_pb.pyi</b></p>
+<p data-ke-size="size16">이 파일은 <a href="https://peps.python.org/pep-0484/#stub-files" target="_blank" rel="noopener">stub file</a> 이라고 합니다. stub file 덕분에 gRPC Request와 Response 를 일반 Python 클래스를 다루듯이 사용할수 있게 됩니다.</p>
+<pre id="code_1742447265271" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from typing import ClassVar as _ClassVar, Optional as _Optional
+
+DESCRIPTOR: _descriptor.FileDescriptor
+
+class MemberResponse(_message.Message):
+    __slots__ = ("member_id", "member_name")
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_NAME_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    member_name: str
+    def __init__(self, member_id: _Optional[str] = ..., member_name: _Optional[str] = ...) -&gt; None: ...</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20"><b>3. gRPC 서버 정의&nbsp;</b></h4>
+<p data-ke-size="size16">이제는 <b>member_service_pb2_grpc&nbsp;</b>를 활용하여 member_service 에서 grpc_server.py 를 만드는 방법을 공유하겠습니다. MemberServiceServicer 를 확장하는 클래스를 정의하고, GetMember 메서드를 오버라이딩합니다. 이때 serer 를 grpc.aio.server() 로 정의하여 python에서 steram 을 사용할경우 발생하는 성능상 불이익을 완화합니다.&nbsp;</p>
+<pre id="code_1742103274169" class="python" data-ke-language="python" data-ke-type="codeblock"><code>
+import asyncio
+import grpc
+import uuid
+
+from sqlalchemy import select
+
+from app.pb import member_service_pb2_grpc
+from app.pb.message import member_request_pb2, member_response_pb2
+from app.pb.member_service_pb2_grpc import MemberServiceServicer
+from app.database.connection import async_session, engine
+from app.database.model import MemberModel, BaseModelDeclarative
+
+class MemberServiceServicerImpl(MemberServiceServicer):
+    async def GetMember(self, request: member_request_pb2.MemberRequest, context):
+        async with async_session() as db:
+            result = await db.execute(
+                select(MemberModel).where(MemberModel.id == uuid.UUID(request.member_id))
+            )
+            member = result.scalars().first()
+
+            if not member:
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("Member not found")
+                return member_response_pb2.MemberResponse()
+
+        return member_response_pb2.MemberResponse(
+            member_id=str(member.id),
+            member_name=member.name
+        )
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(BaseModelDeclarative.metadata.create_all)
+
+async def serve():
+    await init_db()
+
+    server = grpc.aio.server()
+    member_service_pb2_grpc.add_MemberServiceServicer_to_server(MemberServiceServicerImpl(), server)
+    listen_addr = "[::]:50051"
+    server.add_insecure_port(listen_addr)
+    await server.start()
+    await server.wait_for_termination()
+
+
+if __name__ == "__main__":
+    asyncio.run(serve())</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20"><b>4. gRPC 클라이언트 정의</b></h4>
+<p data-ke-size="size16">client 를 정의하는건 더 간단합니다.</p>
+<p data-ke-size="size16">channel 을 만들때에서 grpc.aio 를 이용하여 비동기적으로 grpc 서버를 호출할 수 있도록 하였습니다.</p>
+<p data-ke-size="size16">member-service:50051 로 채널의 연결점을 정의한건, <a href="https://github.com/timothy-jeong/python-grpc-example/tree/simple-example" target="_blank" rel="noopener">github 코드</a>에서 docker-compose 설정에 기반한것으로 언제든 바뀔 수 있습니다.</p>
+<pre id="code_1742103664717" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from uuid import UUID
+
+import grpc
+from google.protobuf.json_format import MessageToDict
+
+from app.pb import member_service_pb2_grpc
+from app.pb.message import member_request_pb2
+
+channel = grpc.aio.insecure_channel("member-service:50051")
+stub = member_service_pb2_grpc.MemberServiceStub(channel)
+
+
+class MemberServiceClient:
+    @staticmethod
+    async def get_member_by(member_id: UUID):
+        member_response = await stub.GetMember(member_request_pb2.MemberRequest(member_id=str(member_id)))
+        return MessageToDict(member_response, preserving_proto_field_name=True)</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이상의 작업을 완료한 뒤 테스트를 해보면 gRPC 통신이 잘 동작하는 것을 알 수 있습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>참고</b></h2>
+<p data-ke-size="size16"><b>gRPC core concepts: <a href="https://grpc.io/docs/what-is-grpc/core-concepts/" target="_blank" rel="noopener&nbsp;noreferrer">https://grpc.io/docs/what-is-grpc/core-concepts/</a></b></p>
+<p data-ke-size="size16"><b>grpc-tools: <a href="https://grpc.io/docs/languages/python/quickstart/#grpc-tools">https://grpc.io/docs/languages/python/quickstart/#grpc-tools</a></b></p>
+<p data-ke-size="size16"><b>Protocol buffers overview: <a href="https://protobuf.dev/overview/" target="_blank" rel="noopener&nbsp;noreferrer">https://protobuf.dev/overview/</a></b></p>
+<p data-ke-size="size16"><b>Protocol buffers dos-donts: <a href="https://protobuf.dev/best-practices/dos-donts/" target="_blank" rel="noopener&nbsp;noreferrer">https://protobuf.dev/best-practices/dos-donts/</a></b></p>
+<p data-ke-size="size16"><b>Protocol buffers python generatede code: <a href="https://protobuf.dev/reference/python/python-generated/" target="_blank" rel="noopener&nbsp;noreferrer">https://protobuf.dev/reference/python/python-generated/</a></b></p>
+<p data-ke-size="size16"><b>what is descriptors by buf.build: <a href="https://buf.build/docs/reference/descriptors/" target="_blank" rel="noopener&nbsp;noreferrer">https://buf.build/docs/reference/descriptors/</a></b></p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #Python #grpc #python grpc how to #python proto file #python grpc tutorial 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>
