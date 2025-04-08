@@ -1,0 +1,251 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>FastAPI log (3) - 설계, 구현</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">FastAPI log (3) - 설계, 구현</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/FastAPI Log</p>
+                                    <p class="date">2025-01-30 22:03:56</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16"><span>이 시리즈는 AWS EKS &amp; FastAPI 환경에서 로그를 적용하는 과정을 다루고 있습니다. 전체 시리즈는 다음과 같습니다.</span></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/manage/newpost/64"><span>FastAPI&nbsp;log&nbsp;(1)&nbsp;-&nbsp;AWS&nbsp;EKS&nbsp;Fargate&nbsp;환경에서&nbsp;log&nbsp;를&nbsp;외부시스템에&nbsp;보내기</span></a></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/65"><span>FastAPI log (2) -AWS EKS Fargate, 왜 Fluent Bit 인가?</span></a></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/66">FastAPI&nbsp;log&nbsp;(3)&nbsp;-&nbsp;설계,&nbsp;구현</a></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">-<span>&nbsp;</span><a style="color: #0070d1;" href="https://probehub.tistory.com/75">FastAPI log (4) - 개선하기</a></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이전 글 <b>"<a href="https://probehub.tistory.com/64" target="_blank" rel="noopener">AWS EKS Fargate 환경에서 log 를 외부시스템에 보내기</a>"</b> 을 통해 로그를 Cloudwatch 로 보내는 인프라 세팅을 맞췄습니다. 이제는 FastAPI 프레임워크에서 어떻게 로그를 형성하여 보내는게 좋을지 더 실무적인 관점에서 고민한 내용을 기록해놓으려고 합니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>uvicorn 의 기본 로그</b></h2>
+<p data-ke-size="size16">FastAPI 는 보통 uvicorn 을 통해 구동됩니다. 이때 별도의 설정이 없다면 uvicorn 은 default access log 와 exception log 를 만들어낸다. 이런 형식의 로그를&nbsp; <a href="https://httpd.apache.org/docs/current/ko/logs.html" target="_blank" rel="noopener"><b>Apache Common Log Format(CLF)</b> </a>라고 합니다.</p>
+<p><figure class="imageblock alignCenter" width="740" height="85" >
+    <span data-lightbox="lightbox">
+        <img src="./img/edited_uvicorn default log.png" width="740" height="85"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">CLF 는직관적이고 가볍다는 장점이 있지만 필요한 정보를 충분히 담아내지 못한다는 단점이 있다. 그렇다면 로그에 <b>"필요한 정보"</b> 는 무엇이 있을까요?</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>API 서버의 표준 로그</b></h2>
+<p data-ke-size="size16">API 요청, 응답을 로깅할때 사용되는 로그의 타입 Access Log, Error Log, Security Log, Performace Log 로 나뉩니다.</p>
+<p data-ke-size="size16"><b>1. Access Log: 누가 언제 어떤 API 를 호출</b>했는지 추적하는 로그.</p>
+<p data-ke-size="size16"><b>2. Error Log</b>: API 호출 중 예외가 발생했을 때의 <b>오류 발생 원인</b>을 파악하는 로그.</p>
+<p data-ke-size="size16"><b>3. Security Log:&nbsp; </b>API의 <b>인증, 권한, 공격 시도</b>와 관련된 정보를 기록하는 로그.</p>
+<p data-ke-size="size16"><b>4. Performance Log:&nbsp;</b>API의 <b>응답 속도, DB 쿼리 성능, 캐싱 여부</b> 등 성능 관련 데이터를 기록하는 로그.</p>
+<h3 data-ke-size="size23"><b>표준 로그셋</b></h3>
+<p data-ke-size="size16">각 로그 타입마다 요구하는 정보가 조금씩 다르지만 이들의 포맷을 통합하여 관리하는 것이 로그 수집기, 로그 분석기와 호환성이 좋을것이라고 생각했습니다. 이러한 이유로 다음의 <b>통합 로깅 json 구조</b>를 적용하고자 했습니다.</p>
+<pre id="code_1738299577236" class="python" data-ke-language="python" data-ke-type="codeblock"><code>{
+    "timestamp": "2025-01-30T14:54:45.345Z",
+    "event_id": "999e8887-e77b-66d3-a456-426614174000",
+    "log_type": "access",  // "access" | "error" | "security" |
+    "level": "INFO",       // "INFO" | "WARNING" | "ERROR"
+    "method": "GET",
+    "path": "/api/v1/products",
+    "status_code": 200,
+    "client_ip": "192.168.1.1",
+    "user_agent": "Mozilla/5.0",
+    "time_taken_ms": 250,
+    "exception": null,           // 에러 로그용 필드 (error)
+    "error_message": null,       // 에러 로그용 필드 (error)
+    "stack_trace": null,         // stacktrace 용 필드
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><u>*request 와 response 에 대한 자세한 정보는 민감한 정보를 담을 수 있기 때문에 기록하지 않습니다.&nbsp;</u></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>FastAPI 로깅 적용</b></h2>
+<h3 data-ke-size="size23"><b>1.&nbsp; 라이브러리 선택</b></h3>
+<h4 data-ke-size="size20"><b>logging 만 이용하기</b></h4>
+<p data-ke-size="size16">python 에는 로그를 위해 내장된 <b><a href="https://docs.python.org/3/library/logging.html#module-logging" target="_blank" rel="noopener">logging 라이브러리</a></b>가 존재합니다. python 언어에 내장된 라이브러리이기 때문에 굉장히 표준적인 선택이라고 할 수 있겠습니다. 하지만, 어플리케이션을 빌드하는 과정에서 다른 외부 라이브러리가 logging 모듈을 건드렸을때 그에 따른 영향을 받을 가능성도 존재합니다.</p>
+<h4 data-ke-size="size20"><b>python-json-logger 과 함께 이용하기</b></h4>
+<p data-ke-size="size16">python 에 내장되진 않았지만 별1.8k 를 받은 <b><a href="https://github.com/madzak/python-json-logger" target="_blank" rel="noopener">python-json-logger 라이브러리</a></b> 역시 존재합니다. 기존 python logging 라이브러리에서 json 을 출력할때 더 편하게 할 수 있도록 도와주는 기능이 포함되어 있습니다.</p>
+<h4 data-ke-size="size20"><b>라이브러리 선택: 결론</b></h4>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">python-json-logger 공식문서에 제시된 예제를 통해 둘을 비교해보겠습니다.</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">python-json-logger 라이브러리를 통해 얻을 수 있는 이점은 json.dumps() 를 호출하지 않아도 된다는 것입니다.</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">하지만 message 라는 필드가 반드시 딸려나오고, 이를 없애기 위해서는 커스텀 설정을 해야한다는 점이 단점이있습니다.</p>
+<pre id="code_1738676257426" class="python" data-ke-language="python" data-ke-type="codeblock"><code>import logging
+import json
+from pythonjsonlogger.json import JsonFormatter
+
+plain_logger = logging.getLogger("plain-logger")
+json_logger = logging.getLogger("json-logger")
+
+plain_logger.setLevel(logging.INFO)
+json_logger.setLevel(logging.INFO)
+
+plain_logger_handler = logging.StreamHandler()
+json_logger_handler = logging.StreamHandler()
+
+# formatter 설정시 차이 발생
+plain_logger_handler.setFormatter(logging.Formatter("%(message)s"))
+json_logger_handler.setFormatter(JsonFormatter())
+
+plain_logger.addHandler(plain_logger_handler)
+json_logger.addHandler(json_logger_handler)
+
+
+# json 형식 출력시 차이 발생
+my_dict = {
+	"message":"Logging only using logger!",
+    "more_data":True
+}
+plain_logger.info(json.dumps(my_dict))
+# {"message": "Logging only using logger!", "more_data": true}
+
+json_logger.info("Logging using pythonjsonlogger!", extra={"more_data": True})
+# {"message": "Logging using pythonjsonlogger!", "more_data": true}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">다른 python 유저들은 logging 과 json 에는 익숙하겠지만, <span style="color: #000000; text-align: start;">python-json-logger 라이브러리에 대해서 별도의 러닝 커브가 존재할것이라는 점, 그리고 이점보다 단점이 복잡성을 더 크게 증가시킨다는 점에서 logging 라이브러리만 이용하는 방향을 정했습다.</span></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23"><b>2.&nbsp; Middleware 와 ExceptionHandler 역할 분리</b></h3>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="./img/FastAPI Reqeust_Response flow.png"  />
+    </span>
+    <figcaption>FastAPI 요청 흐름</figcaption>
+</figure></p>
+<p data-ke-size="size16">FastAPI 요청 흐름을 보면 Middleware 와 ExceptionHandler 의 역할을 고민하게 됩니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">로깅을 Middleware 에서 처리하는게 일반적인데, ExceptionHandler 에서 예외에 대한 정보 없이 응답만 전달하게 된다면 ErrorLog 를 남길 수 없게됩니다. 따라서 ExceptionHandler 에서 Exception 정보를 그대로 Middleware 로 넘겨야겠다! 로 처음에는 방향을 정했었는데, 그럴경우 굳이 ExceptionHandler 가 있을 필요가 없고, Middleware 가 로깅의 역할 뿐만 아니라 Exception 을 처리하는 역할까지 맡아야해서 굉장히 복잡해지는 문제가 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><b>그래서 ExceptionHandler 는 기존과 동일하게 Exception 에 따라 적절한 response 를 반환하는 역할을 하되 request.state 에 에러에 대한 정보를 넘겨주는 방법을 사용하게 되었습니다.</b></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<p data-ke-size="size16">&nbsp;</p>
+<h3 data-ke-size="size23"><b>3. 환경에 따른 로그 변경</b></h3>
+<p data-ke-size="size16">지금까지는 표준로그(json) 를 출력하기 위해 고민을 했습니다. 하지만 각 개발자들이 본인의 로컬 개발환경에서도 json 로그가 출력되는게 좋을까요? 경우에 따라서는 Yes 라고 할 수도 있겠지만, uvicorn 과 python 은 이미 훌륭한 기본 로그 시스템을 보유하고 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">따라서 환경변수로 다음과 같이 설정을 바꿀 수 있게 해주기로 했습니다.</p>
+<pre id="code_1738677790671" class="python" data-ke-language="python" data-ke-type="codeblock"><code>if USE_JSON_LOGGING:
+    setup_request_logger()      # request-logger를 JSON 포맷으로 설정
+    disable_uvicorn_logs()      # uvicorn.access 로그 비활성화
+    app.add_middleware(JsonRequestLoggerMiddleware)
+else:
+    # Uvicorn의 기본 로그 사용
+    pass</code></pre>
+<hr contenteditable="false" data-ke-style="style2" data-ke-type="horizontalRule" />
+<h4 data-ke-size="size20"><b>결론: 구현코드</b><b></b></h4>
+<p data-ke-size="size16">다음과 같은 middleware 를 구현하였습니다.</p>
+<p data-ke-size="size16">하지만 이 구현사항에는 결정적인 오류와 개선 사항이 있습니다. 자세한 이야기는 다음 글에서 이어서 하겠습니다.</p>
+<pre id="code_1740895625513" class="python" data-ke-language="python" data-ke-type="codeblock"><code>import logging
+import traceback
+import time
+import uuid
+import json
+
+from fastapi import FastAPI, Request
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.logger.logger_setup import REQUEST_LOGGER_NAME
+from app.exception import ErrorCode, MyCustomException
+from app.util.env import get_bool_from_env
+
+logger = logging.getLogger(REQUEST_LOGGER_NAME)
+
+STACKTRACE_LOGGING_ENABLED = get_bool_from_env("IS_STACKTRACE_LOGGING", True)
+
+
+class JsonRequestLoggerMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: FastAPI):
+        super().__init__(app)
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        event_id = str(uuid.uuid4())
+
+        log_data = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ", time.gmtime()),
+            "event_id": event_id,
+            "method": request.method,
+            "path": request.url.path,
+            "client_ip": request.client.host if request.client else "unknown",
+            "user_agent": request.headers.get("user-agent"),
+        }
+
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            log_type = "access"
+
+        except Exception as e: 
+            status_code = 500 
+            log_type = "error"
+            log_data['error_code'] = "UNEXPECTED_ERROR" # Or some default code
+            log_data['exception'] = type(e).__name__
+            log_data['error_message'] = str(e) # Log the exception message as fallback
+            log_data['stack_trace'] = traceback.format_exc().splitlines()
+
+            application_exception = MyCustomException(ErrorCode.UNEXPECTED)
+            response = application_exception.to_error_response()
+
+
+        error_info = getattr(request.state, "error_info", None)  # Use getattr
+
+        if error_info:  # exception handler 에서 넘기는 error_info 정보 확인
+
+            status_code = error_info.get("http_status", getattr(ErrorCode.UNEXPECTED, "http_status", 500)) # Use status code from error_info, Default 500
+            log_type = "error" if status_code &gt;= 400 and status_code not in [401, 403] else 'security'
+
+            log_data.update({  # error_info 를 log data 에 추가
+                "error_code": error_info.get("code"),
+                "error_message": error_info.get("message"),
+                "stack_trace": error_info.get("stack_trace") if (STACKTRACE_LOGGING_ENABLED or error_info.get("code") == ErrorCode.UNEXPECTED.code) else None,
+            })
+
+
+        log_level = "ERROR" if status_code &gt;= 400 else "INFO"
+
+        log_data['time_taken_ms'] = int((time.time() - start_time) * 1000)
+        log_data['log_type'] = log_type
+        log_data['level'] = log_level
+        log_data['status_code'] = status_code
+        log_data['db_query_time_ms'] = getattr(request.state, "db_query_time_ms", None)
+
+        # https://docs.python.org/3/library/logging.html#logging.getLevelName 의 Changed in version 3.4 에 따르면
+        # logging.getLevelName(str) 은 유지되긴 하지만 실수였다고 한다. 이를 최대한 사용하지 않기 위해 이런 방법을 이용헀다.
+        log_level_int: int = logging.getLevelNamesMapping()[log_level] 
+        logger.log(log_level_int,json.dumps(log_data, ensure_ascii=False).encode('utf-8'))
+
+        return response</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이상의 고민으로 구현한 코드는 <a href="https://github.com/timothy-jeong/fastapi-logging-example/tree/main" target="_blank" rel="noopener">fastapi-logging-example</a> 프로젝트로 정리해두었습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<p data-ke-size="size16">&nbsp;</p>
+<h2 data-ke-size="size26"><b>참고자료</b></h2>
+<p data-ke-size="size16">API 로그에 대하여: <a href="https://www.moesif.com/blog/api-analytics/api-strategy/API-Logs/" target="_blank" rel="noopener">API Logs: Everything You Need to Know</a></p>
+<p data-ke-size="size16">API 로그 가이드: <a href="https://www.merge.dev/blog/api-logs" target="_blank" rel="noopener">A&nbsp;guide&nbsp;to&nbsp;API&nbsp;logs</a></p>
+<p data-ke-size="size16">python logging: <a href="https://docs.python.org/3/library/logging.html#module-logging" target="_blank" rel="noopener&nbsp;noreferrer">https://docs.python.org/3/library/logging.html#module-logging</a></p>
+<p data-ke-size="size16">python josn logger: <a href="https://nhairs.github.io/python-json-logger/latest/" target="_blank" rel="noopener&nbsp;noreferrer">https://nhairs.github.io/python-json-logger/latest/</a></p>
+<p data-ke-size="size16">FastAPI Middleware: <a href="https://fastapi.tiangolo.com/tutorial/middleware/" target="_blank" rel="noopener&nbsp;noreferrer">https://fastapi.tiangolo.com/tutorial/middleware/</a></p>
+<p data-ke-size="size16">FastAPI ExceptionHandler: <a href="https://fastapi.tiangolo.com/tutorial/handling-errors/" target="_blank" rel="noopener&nbsp;noreferrer">https://fastapi.tiangolo.com/tutorial/handling-errors/</a></p>
+<p data-ke-size="size16">AQLAlchemy 비동기 연결 이벤트: <a href="https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#examples-of-event-listeners-with-async-engines-sessions-sessionmakers" target="_blank" rel="noopener">Examples&nbsp;of&nbsp;Event&nbsp;Listeners&nbsp;with&nbsp;Async&nbsp;Engines</a></p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

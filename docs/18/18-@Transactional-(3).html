@@ -1,0 +1,144 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>@Transactional (3)</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">@Transactional (3)</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/SpringBoot 파헤치기</p>
+                                    <p class="date">2024-10-16 09:14:19</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16">@Transactional 어노테이션에서 TransactionManager 를 별도로 지정하여 트랜잭션을 처리할 수 있다는 사실을 알았다.&nbsp;</p>
+<p data-ke-size="size16">이 글에서는 JDBC, JPA, R2DBC(Reactive) 트랜잭션 매니저가 <span style="color: #333333; text-align: start;"><span>&nbsp;</span>DB 커넥션을 얻어오고 트랜잭션을 처리하는 과정을 살펴보자</span><b></b></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>JDBC에서의 트랜잭션 처리 과정</b></h2>
+<h4 data-ke-size="size20"><b>트랜잭션 시작</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>@Transactional 메서드 호출 시, <b>TransactionInterceptor</b>가 호출됩니다.</li>
+<li>스프링의 <b>DataSourceTransactionManager</b>가 트랜잭션을 시작하며, <b>DataSource</b>에서 커넥션을 획득합니다.</li>
+</ul>
+<h4 data-ke-size="size20"><b>커넥션 동기화</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>동일 트랜잭션 내에서 여러 SQL을 실행할 경우, 동일한 <b>커넥션</b>이 사용됩니다.</li>
+<li>트랜잭션 동기화에 의해 하나의 커넥션이 트랜잭션 경계 내에서 유지됩니다.</li>
+</ul>
+<h4 data-ke-size="size20"><b>SQL 실행</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>JdbcTemplate을 통해 SQL이 실행됩니다.</li>
+</ul>
+<pre id="code_1729037608089" class="java" data-ke-language="java" data-ke-type="codeblock"><code>jdbcTemplate.update("INSERT INTO users (name) VALUES (?)", name);</code></pre>
+<h4 data-ke-size="size20"><b>커밋 또는 롤백 수행</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>메서드가 정상 종료되면 <b>커밋</b>을 수행합니다.</li>
+<li>런타임 예외 발생 시 <b>롤백</b>합니다.<br />(필요 시 @Transactional(rollbackFor = Exception.class)로 예외 처리 제어 가능)</li>
+</ul>
+<h4 data-ke-size="size20"><b>커넥션 반환</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>트랜잭션이 종료되면 커넥션은 <b>풀</b>로 반환됩니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style6" />
+<h2 data-ke-size="size26"><b>JPA에서의 트랜잭션 처리 과정</b></h2>
+<h4 data-ke-size="size20"><b>트랜잭션 시작</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>@Transactional 메서드 호출 시, <b>TransactionInterceptor</b>가 호출됩니다.</li>
+<li>스프링의 <b>JpaTransactionManager</b>가 트랜잭션을 시작하며, <b>EntityManager</b>가 커넥션을 획득합니다.</li>
+</ul>
+<h4 data-ke-size="size20"><b>엔티티 변경 및 캐싱</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>JPA는 엔티티 변경 작업을 영속성 컨텍스트(캐시)에 저장합니다. 예시:</li>
+</ul>
+<div>
+<div>
+<pre id="code_1729037578868" class="java" data-ke-language="java" data-ke-type="codeblock"><code>User user = new User("Alice");
+entityManager.persist(user);  // 영속성 컨텍스트에 저장</code></pre>
+</div>
+</div>
+<h4 data-ke-size="size20"><b>SQL 실행 지연 (지연 로딩)</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>엔티티 매니저가 <b>플러시(Flush)</b> 되기 전까지 SQL 실행이 지연됩니다.</li>
+<li>트랜잭션이 종료되거나 명시적으로 <b>entityManager.flush()</b> 호출 시 SQL이 실행됩니다.<b></b></li>
+</ul>
+<h4 data-ke-size="size20"><b>커밋 또는 롤백 수행</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>메서드가 정상 종료되면 JPA가 <b>플러시(Flush)</b> 후, 커밋을 수행합니다.</li>
+<li>런타임 예외 또는 지정된 예외 발생 시 <b>롤백</b>합니다.</li>
+</ul>
+<h4 data-ke-size="size20"><b>커넥션 반환</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>트랜잭션 종료 후, 엔티티 매니저는 커넥션을 <b>풀로 반환</b>합니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style6" />
+<h2 data-ke-size="size26"><b>R2DBC의 트랜잭션 처리 흐름</b></h2>
+<h4 data-ke-size="size20"><b>트랜잭션 시작</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>@Transactional 메서드가 호출되면 <b>TransactionInterceptor</b>가 트랜잭션 매니저인 <b>ReactiveTransactionManager</b>를 통해 트랜잭션을 시작합니다.</li>
+<li>커넥션은 <b>비동기적으로 획득</b>되며, 이후 트랜잭션 경계를 유지합니다.<b></b></li>
+</ul>
+<h4 data-ke-size="size20"><b>비동기 SQL 실행</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>R2DBC는 <b>Reactive Streams</b>(Flux나 Mono)를 사용하여 비동기적으로 SQL을 실행합니다. 여러 쿼리가 호출되어도 같은 트랜잭션 경계 내에서 <b>동일한 커넥션</b>을 사용합니다.</li>
+</ul>
+<pre id="code_1729037410045" class="java" data-ke-language="java" data-ke-type="codeblock"><code>@Transactional
+public Mono&lt;Void&gt; updateBalances(int fromId, int toId, int amount) {
+    return r2dbcEntityTemplate
+        .getDatabaseClient()
+        .sql("UPDATE accounts SET balance = balance - :amount WHERE id = :fromId")
+        .bind("amount", amount)
+        .bind("fromId", fromId)
+        .then()
+        .then(r2dbcEntityTemplate.getDatabaseClient()
+            .sql("UPDATE accounts SET balance = balance + :amount WHERE id = :toId")
+            .bind("amount", amount)
+            .bind("toId", toId)
+            .then());
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20"><b>커밋 또는 롤백 수행</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>비동기 작업이 <b>모두 성공</b>하면 트랜잭션 매니저가 커밋합니다.</li>
+<li>만약 중간에 예외가 발생하면 모든 작업이 <b>롤백</b>됩니다.<b></b></li>
+</ul>
+<h4 data-ke-size="size20"><b>커넥션 반환</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>트랜잭션 종료 후, 커넥션은 <b>비동기적으로 풀에 반환</b>됩니다.</li>
+</ul>
+<h4 data-ke-size="size20"><b>트랜잭션 매니저 설정</b></h4>
+<pre id="code_1729037491781" class="java" data-ke-language="java" data-ke-type="codeblock"><code>@Configuration
+public class R2dbcConfig {
+
+    @Bean
+    public ReactiveTransactionManager transactionManager(ConnectionFactory connectionFactory) {
+        return new R2dbcTransactionManager(connectionFactory);
+    }
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

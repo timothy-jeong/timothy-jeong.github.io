@@ -1,0 +1,141 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>백준 2630 색종이 만들기 Java 풀이</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">백준 2630 색종이 만들기 Java 풀이</h2>
+                                <div class="box-info">
+                                    <p class="category">알고리즘/문제 풀이</p>
+                                    <p class="date">2024-11-01 10:28:53</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"></script>
+<p><figure class="imageblock alignCenter" width="350" height="350" >
+    <span data-lightbox="lightbox">
+        <img src="./img/DALL&middot;E 2024-11-01 09.42.43 - A heartwarming illustration of a young child cutting colorful paper with scissors. The child is focused and happily engaged in the activity, with piec.webp" width="350" height="350"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<h2 data-ke-size="size26">문제</h2>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #555555; text-align: start;">N&times;N(N=2</span>k<span style="background-color: #ffffff; color: #555555; text-align: start;">, k는 1 이상 7 이하의 자연수)<span> 크기의 배열이 주어지고, 0 아니면 1로 채워져있다. 0을 흰색, 1을 파란색으로 인식할때 배열이 하나의 색상으로만 이뤄질때까지 4등분씩 잘라내고 최종적으로 모든 정사각형이 하나의 색상으로만 이루어졌을때 흰색 정사각형개수, 파란색 정사각형 개수를 출력하라</span></span></p>
+<h2 data-ke-size="size26">접근</h2>
+<h3 data-ke-size="size23">로직</h3>
+<p data-ke-size="size16">(1) 판단: 주어진 배열 BOARD 가 BOARD[x][y] ~ BOARD[x+size][y+size] 안에 모든 숫자가 동일한지 판단한다.</p>
+<p data-ke-size="size16">(2) 병합: 주어진 배열 BOARD 이 일정 범위 (x,y ~ + size) 안에서 동일한 숫자만 있다면 그에 맞는 색상{흰색, 파란색} 의 개수를 늘린다.</p>
+<p data-ke-size="size16">(3) 분할: 주어진 배열 BOARD 이 일정 범위 (x,y ~ + size) 안에서 동일한 숫자만 있지 않다면 배열을 4등분하여 (1) 단계를 반복한다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">분할이후 판단을 <b>재귀적으로 호출</b>하는 흐름이 될 것이다.</p>
+<h3 data-ke-size="size23">시간복잡도</h3>
+<p data-ke-size="size16">주어진 배열을 나누고<b>(분할)</b> 숫자를 센다<b>(정복) </b>이 분할정복 알고리즘의 시간복잡도는 어떻게 될까?</p>
+<p data-ke-size="size16">빅오 표기법을 생각하면 <b>각 단계에서 이루어지는 연산</b>과 <b>나누어진 부분에서 이뤄지는 연산</b>의 시간복잡도 중 큰것을 넣어야한다.</p>
+<h4 data-ke-size="size20">단계별 시간복잡도</h4>
+<p data-ke-size="size16">각 단계별로 어떤것들이 이뤄지는지 보자</p>
+<p data-ke-size="size16">(1) 판단 단계에서는 최대 NxN 을 순회하여 숫자 동일성을 판단하게 된다 O(N^2)</p>
+<p data-ke-size="size16">(2) 병합 단계에서는 흰색 or 파란색 판단이므로 연산이 한번만 이뤄진다. O(1)</p>
+<p data-ke-size="size16">(3) 분할 단계에서는 4등분 하여 판단 단계로 넘겨야 하므로 보통은 4번의 연산이 이뤄진다. O(4)<br /><br />각 단계 별로 봤을때는 N^2 이 최악의 시간복잡도가 된다.</p>
+<h4 data-ke-size="size20">한번의 분할이 만드는 시간 복잡도</h4>
+<p data-ke-size="size16">그렇다면 분할 이후 재귀적으로 호출하게 된다면 하나의 재귀 호출마다 (N/2)^2 의 시간복잡도를 갖는 연산이 이뤄진다.</p>
+<p data-ke-size="size16">한번의 재귀 호출마다 4번 연산이 요구되므로 <span style="color: #333333; text-align: start;">4 x (N/2)^2<span>&nbsp; 가 최종적인 시간복잡도가 된다.</span></span></p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20"><span style="color: #333333; text-align: start;"><span>재귀호출의 횟수</span></span></h4>
+<p data-ke-size="size16"><span style="color: #333333; text-align: start;"><span>그러면 재귀 호출은 최대 몇번까지 일어날까?</span></span></p>
+<p data-ke-size="size16">한변의 길이가 N 인 정사각형을 4등분했을 때 한변의 길이가 1이 될때까지의 반복횟수는 log2(N) 이다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이상을 종합해보면&nbsp; 하나의 수열이 된다.</p>
+<p data-ke-size="size16">log2(N) x 4^i x (N/2^i)^2 , { when&nbsp; 0 &lt;= i &lt; log2(N) }</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">결국 빅오 표기법에 의해서 O(N^2) 의 시간복잡도를 기대할수 있다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h2 data-ke-size="size26">풀이</h2>
+<pre id="code_1730421713279" class="java" data-ke-language="java" data-ke-type="codeblock"><code>public class Main {
+    private static final int WHITE_COLOR_MARKER = 0;
+    private static int whiteSquareCount, blueSquareCount= 0;
+    private static int[][] BOARD;
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StringTokenizer st;
+
+        // 입력 초기화
+        int N = Integer.parseInt(br.readLine());
+        BOARD = new int[N][N];
+
+        for (int i = 0; i &lt; N; i++) {
+            st = new StringTokenizer(br.readLine());
+            for (int j = 0; j &lt; N; j++) {
+                BOARD[i][j] = Integer.parseInt(st.nextToken());
+            }
+        }
+
+        // 분할&amp;정복
+        divideAndCount(0, 0, N);
+
+        // 결과값 출력
+        System.out.println(whiteSquareCount +"\n" + blueSquareCount);
+    }
+
+    private static void divideAndCount(int x, int y, int size) {
+        if (isOneColor(x, y, size)) {
+            if (BOARD[x][y] == WHITE_COLOR_MARKER) {
+                whiteSquareCount++;
+            } else {
+                blueSquareCount++;
+            }
+            return;
+        }
+
+        int newSize = size/2;
+        divideAndCount(x, y, newSize);
+        divideAndCount(x +newSize, y, newSize);
+        divideAndCount(x, y + newSize, newSize);
+        divideAndCount(x + newSize, y + newSize, newSize);
+    }
+
+    /**
+     *
+     * @param x BOARD 탐색 시작 행 INDEX
+     * @param y BOARD 탐색 시작 열 INDEX
+     * @param size i+size, j+size 까지 탐색
+     * @return {true: 모두 같은 색상만 있음 ,false: 서로 다른 색상이 있음}
+     */
+    private static boolean isOneColor(int x, int y, int size) {
+        int color = BOARD[x][y];
+        for (int i = x; i &lt; x + size; i++) {
+            for (int j = y; j &lt; y + size; j++) {
+                if (color != BOARD[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+}</code></pre>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #백준 2630 #백준 2630 색종이 만들기 #백준 2630 JAVA #백준 2630 색종이 만들기 java #색종이 만들기 java 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

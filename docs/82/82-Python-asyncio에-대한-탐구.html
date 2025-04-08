@@ -1,0 +1,295 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>Python asyncio에 대한 탐구</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">Python asyncio에 대한 탐구</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/python</p>
+                                    <p class="date">2025-03-23 18:57:05</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="360" height="332" >
+    <span data-lightbox="lightbox">
+        <img src="./img/1_zTa718E_YuXoFozMgzgjAg.webp" width="360" height="332"  />
+    </span>
+    <figcaption>https://medium.com/@yashwanthnandam/a-beginners-guide-to-python-s-asyncio-lets-get-async-ing-b2c9c81557cd</figcaption>
+</figure></p>
+<p data-ke-size="size16">Python Web 개발을&nbsp;<span style="color: #333333; text-align: start;">FastAPI로<span> 시작하다보니 비동기 상태에서 Python을 다루는게 너무나 당연했습니다. 그동안 막연히 Python을 비동기적으로 쓰려면 asnyc 를 써야지 생각만해왔습니다. 주말을 맞이해서 이번에 그 기반을 닦아보려고 합니다. </span></span><span style="color: #333333; text-align: start;"><span>오늘은 그래서 asyncio 는 무엇인지 그리고 왜 필요한지, node.js 그리고 Java 와의 차이점은 무엇인지 등을 알아보고 정리하려 합니다.</span></span></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>asyncio란 무엇인가?</b></h2>
+<p data-ke-size="size16">공식&nbsp;문서에서는&nbsp;<a href="https://docs.python.org/ko/3/library/asyncio.html" target="_blank" rel="noopener">asyncio</a>를<b> &ldquo;async/await 문법을 이용하는 동시성(concurrent)처리를 위한 라이브러리"</b> 라고 소개하고 있습니다. 이러한 asyncio 라이브러리를 이용하여 IO bound 되어있는 작업을 효율적으로 처리할 수 있고, 이러한 이유로 고성능 웹 프라임워크, 네트워크 연결, 데이터베이스 연결등의 다른 라이브러리의 근간이 됩니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">asyncio는 Python에서 비동기 I/O를 지원하기 위한 라이브러리로, async/await 구문을 사용하여 동시성 있는 코드를 작성할 수 있게 해줍니다, 즉 Python 코드에서 동시성을 구현하기 위한 내장 도구입니다​.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">asyncio를 사용하면 한 번에 여러 작업을 동시에 수행하는 듯한 코드를 작성할 수 있지만, 실제로는 <b>단일 스레드 상에서 비동기적으로 실행</b>됩니다​. 이러한 비동기 프로그래밍은 주로 I/O-bound 작업(입출력 대기 시간이 많은 작업)에 적합합니다. 예를 들어 파일 읽기/쓰기, 네트워크 요청 처리, DB 쿼리 등에서 asyncio를 사용하면 한 작업이 I/O를 기다리는 동안 다른 작업을 수행함으로써 효율을 높일 수 있습니다. 실제로 공식 문서에서도 asyncio는 I/O-bound와 고수준 네트워크 코드에 이상적으로 맞는다고 언급합니다​. 반면 CPU 연산 위주의 작업에는 asyncio가 적합하지 않을 수 있는데, 이는 뒤에서 자세히 다루겠습니다. 정리하자면 asyncio는 Python에 내장된 <b>&ldquo;이벤트 루프 기반 비동기 I/O 라이브러리&rdquo;</b>입니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<blockquote data-ke-style="style2">asyncio를 사용하면 개발자가 명시적으로 코루틴(coroutine)을 정의하고, 이벤트 루프를 통해 이들을 동시 실행하여 동시성을 달성할 수 있습니다. 이러한 디자인은 전통적인 스레드 기반 접근과 달리 **협력적 멀티태스킹(cooperative multitasking)**으로 이루어지며, 하나의 스레드안에서 여러 작업이 교대로 실행되는 방식입니다​.</blockquote>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size14">asnycio 가 Python 공식 라이브러리로 등장하기 전에는 <a style="color: #0070d1; text-align: start;" href="https://twisted.org/">Twisted</a><span style="color: #333333; text-align: start;">나<span>&nbsp;</span></span><a style="color: #0070d1; text-align: start;" href="https://www.gevent.org/">Gevent</a><span style="color: #333333; text-align: start;"><span>&nbsp;</span>같은 서드파티 비동기 라이브러리가 있었습니다.</span></p>
+<h3 data-ke-size="size23"><b>Python에서 asyncio가 등장한 배경</b></h3>
+<p data-ke-size="size16">Python에서&nbsp;asyncio가&nbsp;등장한&nbsp;배경에는&nbsp;<b>언어&nbsp;자체의&nbsp;실행&nbsp;모델과&nbsp;I/O&nbsp;병목&nbsp;문제</b>,&nbsp;그리고&nbsp;<b>기존&nbsp;스레드&nbsp;모델의&nbsp;한계</b>&nbsp;등이&nbsp;있습니다.&nbsp;Python은&nbsp;전통적으로&nbsp;동시성&nbsp;처리를&nbsp;위한&nbsp;기본&nbsp;수단으로&nbsp;멀티스레딩(threading)과&nbsp;멀티프로세싱(multiprocessing)을&nbsp;제공해&nbsp;왔습니다.&nbsp;그러나&nbsp;두&nbsp;접근법&nbsp;모두&nbsp;장단점이&nbsp;있고,&nbsp;Python만의&nbsp;제약도&nbsp;존재합니다.&nbsp;</p>
+<h4 data-ke-size="size20"><b>GIL과 싱글 스레드 중심 구조</b></h4>
+<p data-ke-size="size16">Python 인터프리터(CPython 구현)에는 <b>GIL(Global Interpreter Lock)</b>이라는 락이 있습니다. GIL 때문에 한 시점에 하나의 스레드만 Python 바이트코드를 실행할 수 있게됩니다. 그 결과, 멀티스레드를 사용해도 CPU-bound 작업(순수 파이썬 연산이 많은 작업)의 경우 동시에 여러 스레드가 실행되지 못하고 하나씩 실행됩니다. 즉, CPU를 많이 쓰는 작업에서는 스레드를 늘려도 성능 향상이 거의 없고, 오히려 컨텍스트 스위칭 오버헤드로 약간 느려질 수도 있습니다.</p>
+<blockquote data-ke-style="style2"><a href="https://news.hada.io/topic?id=16978" target="_blank" rel="noopener">Python 3.13 부터는 GIL 제약조건이 약화되었습니다.</a> 하지만 이러한 변화가 바로 asyncio의 장점을 퇴색시키기는 어려울것으로 보입니다. 아래에도 나오지만 CPU 스케줄링의 원리에 따라 스레드가 I/O 작업을 처리할때 다른 스레드가 실행되기 때문에 GIL이 asyncio 가 큰 장점을 발휘하던 I/O에 치명적이지 않기 때문입니다. 다만 Python의 CPU Bound 작업 성능이 크게 개선될것으로 기대됩니다.</blockquote>
+<h4 data-ke-size="size20"><b>I/O-bound 작업의 병목</b></h4>
+<p data-ke-size="size16">반면 I/O-bound 작업(파일/네트워크 입출력처럼 대기 시간이 큰 작업)의 경우, GIL 하에서도 스레드가 유용하긴 합니다​. 예를 들어 하나의 스레드가 네트워크 응답을 기다리는 동안 GIL을 놓고 다른 스레드가 실행될 수 있기 때문입니다​. 하지만 전통적인 스레드 기반 I/O 처리에는 다른 문제가 있습니다. 만약 수천 개의 동시 연결을 처리해야 한다면, 수천 개의 스레드를 생성하는 것은 큰 메모리 소모와 문맥 전환 비용을 초래합니다. <b>Python 스레드는 운영체제 스레드로 구현되므로, 많은 양을 띄우면 OS 스케줄러 부하도 커지고 성능이 떨어집니다.&nbsp;</b></p>
+<h4 data-ke-size="size20"><b>스레드 기반 모델의 복잡도</b></h4>
+<p data-ke-size="size16">스레드를 사용하면 공유 자원 접근 동기화(락 등) 문제, 데드락, 경쟁조건 같은 복잡도가 따라옵니다. 특히 Python에서는 데이터 공유에 대한 동기화를 프로그래머가 신경써야 하고, 디버깅도 어려울 수 있습니다. I/O처리를 위해 단순히 동시성을 얻고 싶었는데, 이러한 부수적인 어려움이 있는 것이죠.&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p><figure class="imageblock alignCenter" width="550" height="359" >
+    <span data-lightbox="lightbox">
+        <img src="./img/python eventloop.svg" width="550" height="359"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이러한&nbsp;이유들로,&nbsp;Python&nbsp;커뮤니티에서는&nbsp;보다&nbsp;가벼운&nbsp;동시성&nbsp;모델을&nbsp;필요로&nbsp;했습니다.&nbsp;<b>이벤트&nbsp;루프&nbsp;기반의&nbsp;비동기&nbsp;처리</b>는 이를 해결할 대안으로 떠올랐습니다. 이미 Node.js나 JavaScript 런타임이 이벤트 루프 기반 비동기 처리를 활용하여 높은 동시성을 효율적으로 다루고 있었고, Python 생태계 내에서도 Twisted, Tornado 같은 이벤트 루프 라이브러리가 존재하고 있었습니다. 다만 Python 표준 라이브러리에는 통합된 솔루션이 없었죠. asyncio는 이러한 요구에 따라 <b>Python 3.4 (2014년경)</b>에 도입되었습니다​.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">Guido van Rossum이 주도한 Tulip프로젝트(<a href="https://peps.python.org/pep-3156/" target="_blank" rel="noopener">PEP 3156</a>)로부터 시작하여 표준화되었으며, 이후 Python 3.5에서 async/await 구문 지원(<a href="https://peps.python.org/pep-0492/" target="_blank" rel="noopener">PEP 492</a>)이 추가되면서 비로소 개발자가 쓰기 편한 형태의 비동기 프로그래밍이 가능해졌습니다​. Python 3.7에서 asyncio.run() 함수가 도입되어 이벤트 루프 실행이 더욱 간편해지고, ayncio는 사실상 Python에서 비동기 프로그래밍의 표준이 되었습니다​.</p>
+<h3 data-ke-size="size23"><b>Python의 thread와의 차이점</b></h3>
+<p data-ke-size="size16">위에서 말한것처럼 Tulip프로젝트 이전에는 Python에서 동시성은 <b>스레드(thread)</b>로 구현되곤 했습니다. asyncio의 <b>코루틴 기반 동시성</b>은 겉보기에는 스레드와 비슷하게 여러 작업을 동시에 처리하지만, <b>내부 동작과 성능 특성에서 차이</b>가 있습니다. 주요 차이점을 하나씩 살펴보겠습니다.</p>
+<h4 data-end="4513" data-start="4492" data-ke-size="size20"><b>동시성 구현 방식</b></h4>
+<ul style="list-style-type: disc;" data-end="5502" data-start="4515" data-ke-list-type="disc">
+<li data-end="4901" data-start="4515"><b>스레드(Thread)</b>: 하나의 프로세스 내에서 여러 OS 스레드를 실행함으로써 동시성을 얻습니다. 운영체제가 CPU 시간을 여러 스레드에 분배해주므로, 스레드들은&nbsp;<b>선점형 멀티태스킹(preemptive multitasking)</b>을 합니다. 각 스레드는 독립적인 호출 스택을 갖고 병렬로 실행되지만, <b>Python의 경우 GIL로 인해 동일 시점에 하나의 스레드만 실행된다는 제약</b>이 있습니다​. 그래도 I/O 대기 중에는 자연스럽게 다른 스레드로 전환되므로 I/O-bound 작업에서 병렬성이 어느 정도 실현됩니다​</li>
+<li data-end="5502" data-start="4903"><b>asyncio(코루틴)</b>: 하나의 스레드 안에서 <b>이벤트 루프(event loop)</b>가 여러 코루틴(coroutine)을 <b>협력적으로 스케줄링</b>합니다​. 각 코루틴은 await 키워드를 만나면 <b>자신이 제어권을 양보</b>하여 이벤트 루프가 다른 코루틴을 실행하도록 합니다. 따라서 asyncio의 동시성은 <b>협력적 멀티태스킹(cooperative multitasking)</b>입니다. OS가 강제로 태스크를 바꾸는 것이 아니라, 코루틴들이 스스로 양보하는 것이죠​. 이러한 코루틴 전환은 <b>결정적인 시점</b>(주로 I/O 작업 전에 await할 때)에 일어나므로 오버헤드가 적고, 여러 코루틴이 <b>하나의 호출 스택</b>을 공유합니다. 결과적으로, 수천 개의 작업도 <b>단일 스레드</b>에서 효율적으로 관리할 수 있게 됩니다​<span></span></li>
+</ul>
+<h4 data-end="5526" data-start="5504" data-ke-size="size20"><b>성능과 리소스 사용</b></h4>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="./img/4_01_ThreadDiagram.jpg"  />
+    </span>
+    <figcaption>https://www.cs.uic.edu/~jbell/CourseNotes/OperatingSystems/4_Threads.html</figcaption>
+</figure></p>
+<ul style="list-style-type: disc;" data-end="7300" data-start="5528" data-ke-list-type="disc">
+<li data-end="6361" data-start="5528"><b>스레드의 성능 및 오버헤드:</b> Python에서 스레드는 I/O-bound 작업에 한해 유용하며, 이러한 경우 여러 스레드가 있으면 (GIL로 인해 한 번에 한 스레드씩 실행되지만) 한 스레드가 파일/네트워크 대기 시 다른 스레드가 실행되어 <b>대기 시간을 숨길 수 있습니다</b>​. 하지만 스레드를 많이 생성하면 각 스레드는&nbsp;<b>스택 메모리</b>를 차지하고, 컨텍스트 스위치에 비용이 듭니다.&nbsp;</li>
+<li data-end="7300" data-start="6363"><b>asyncio의 성능 특성:</b> asyncio는 <b>수많은 작업을 동시 처리</b>할 때도 <b>메모리 오버헤드가 낮고</b>(OS 스레드를 생성하지 않으므로), 컨텍스트 스위치가 필요할 때만 발생하여 매우 효율적입니다​​, 즉&nbsp;<b>스레드보다 적은 자원으로 높은 동시성</b>을 달성합니다​</li>
+</ul>
+<blockquote data-ke-style="style2">GIL때문에 Python MultiThread 환경에서 CPU Bound 작업의 효율성이 낮아지는것은 언급했습니다. 하지만 그렇기 때문에 asyncio 를 이용한 CPU Bound 작업이 효율적이라고 생각하면 안됩니다. <b>하나의 코루틴이 CPU를 오래 점유하면(예: 복잡한 계산을 계속하면) await로 양보하기 전까지는 다른 코루틴이 실행되지 못하므로 전체 이벤트 루프가 정지된 것처럼 됩니다​.</b>&nbsp; 따라서 CPU 집약적인 일은 asyncio 안에서 하지 않고, 별도의 프로세스나 스레드로 offload 하거나(예: run_in_executor), 계산을 적절히 await로 나눠주어야 합니다.</blockquote>
+<h4 data-ke-size="size20"><b>코드 작성 및 구조</b></h4>
+<p data-ke-size="size16"><b>쓰레드 코드:</b> 쓰레드를 사용하려면 각 작업을 함수로 만들고 threading.Thread(target=함수) 방식으로 실행합니다. 결과를 모으려면 join()으로 모든 쓰레드가 끝날 때까지 기다려야 하고, 작업 사이에 공유 데이터가 있다면 Lock 같은 동기화 도구도 직접 사용해야 합니다. 예를 들어 여러 URL을 다운로드하는 코드를 스레드로 짜면 다음과 같습니다:</p>
+<pre id="code_1742737154442" class="python" data-ke-language="python" data-ke-type="codeblock"><code>import threading
+import requests
+
+urls = [ ... 리스트 ...]
+results = []
+
+def download(url):
+    resp = requests.get(url)        # 네트워크 I/O (블로킹)
+    results.append(resp.text)       # (공유 리스트 접근 - 동기화 필요할 수 있음)
+
+threads = []
+for url in urls:
+    t = threading.Thread(target=download, args=(url,))
+    t.start()
+    threads.append(t)
+for t in threads:
+    t.join()  # 모든 스레드 작업 완료 대기
+print(len(results), "개의 응답 수신 완료")</code></pre>
+<p data-ke-size="size16">위 코드에서는 requests.get 호출이 <b>블로킹 I/O</b>이지만, 여러 스레드를 통해 동시 요청이 가능합니다. 다만 results.append는 공유 리스트 접근이라 스레드 간 경합이 발생할 수 있어서, 엄격히 따지면 Lock이 필요할 수도 있습니다. 이렇듯 스레드 코드는 동시성 처리를 비교적 <b>자동으로 OS에 맡기지만</b>, 공유상태 관리 등에서 주의가 필요합니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><b>asyncio 코드:</b> asyncio를 사용하면 우선 async def로 코루틴 함수를 정의하고, 그 안에서 await으로 비동기 작업을 호출합니다. 그리고 asyncio.run() 또는 이벤트 루프를 통해 이 코루틴들을 실행합니다. 예를 들어 위와 동일한 작업을 asyncio와 aiohttp로 구현하면 다음처럼 작성할 수 있습니다 (requests는 동기 라이브러리라 사용할 수 없고, aiohttp 같은 비동기 HTTP 클라이언트를 사용해야 합니다):</p>
+<pre id="code_1742737199471" class="python" data-ke-language="python" data-ke-type="codeblock"><code>import asyncio
+import aiohttp
+
+urls = [ ... 리스트 ...]
+results = []
+
+async def download(url, session):
+    async with session.get(url) as resp:   # 비동기 HTTP GET
+        text = await resp.text()          # 결과 본문 읽기 (비동기 I/O)
+        results.append(text)
+
+async def main():
+    async with aiohttp.ClientSession() as session:
+        tasks = [asyncio.create_task(download(url, session)) for url in urls]
+        await asyncio.gather(*tasks)      # 모든 다운로드 코루틴 병행 실행
+    print(f"{len(results)}개의 응답 수신 완료")
+
+asyncio.run(main())</code></pre>
+<p data-ke-size="size16">위 asyncio 코드는 async with 문으로 HTTP 세션을 관리하고, asyncio.gather로 다수의 다운로드 작업을 <b>동시에 실행</b>합니다. await resp.text() 하는 동안 다른 task들이 실행되므로, 진짜 동시에 네트워크를 기다리고 처리하는 효과를 얻습니다. 또한 코드에서 공유 리스트 results에 append 하는 부분은 한 스레드 내에서 실행되므로 <b>데이터 경합 없이</b> 안전합니다. 전반적으로, asyncio 코드는 <b>동기 코드처럼 순차적 구조</b>를 유지하면서도, await 키워드 덕분에 자연스럽게 동시성을 부여합니다.</p>
+<h4 data-end="9418" data-start="9392" data-ke-size="size20"><b>상황별 효율성과 선택 기준</b></h4>
+<ul style="list-style-type: disc;" data-end="10536" data-start="9420" data-ke-list-type="disc">
+<li data-end="9753" data-start="9420"><b>I/O-bound 작업이 많은 서버나 애플리케이션</b>에서는 asyncio가 빛을 발합니다. 예를 들어 웹 크롤러, 대용량 API 호출 처리, 채팅 서버 등 <b>동시에 수천 개의 네트워크 I/O</b>를 해야 하는 경우, 쓰레드로 구현하면 수천 스레드를 만들기 어려운 반면 asyncio는 한 이벤트 루프에서 수천 코루틴을 관리해낼 수 있습니다. 이러한 경우 asyncio가 <b>더 가볍고 확장성 있게(scale) 동작</b>합니다​​</li>
+<li data-end="10223" data-start="9755"><b>CPU-bound 작업</b>(예: 이미지 처리, 머신러닝 연산 등 계산 위주)은 asyncio로 처리하면 오히려 전체가 느려집니다. 이때는 오히려 멀티스레드보다 <b>멀티프로세싱</b>(또는 C 확장 모듈 활용)이 필요합니다. CPU 작업은 여러 코어에서 병렬로 돌려야 빨라지는데, Python 쓰레드는 GIL로 막혀 있으니, 차라리 멀티프로세싱으로 별도 프로세스를 돌리는것이 권장됩니다. 혹은 Python 3.11 이후 도입된 <a href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor" target="_blank" rel="noopener">concurrent.futures.ThreadPoolExecutor</a>/<a href="https://docs.python.org/3/library/concurrent.futures.html#processpoolexecutor" target="_blank" rel="noopener">ProcessPoolExecutor</a>를 적절히 쓰는 것이 나을 수 있습니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h3 data-ke-size="size23"><b>I/O 효율적이라고 알려진 node.js 와의 비교</b></h3>
+<p><figure class="imageblock alignCenter" width="704" height="364" >
+    <span data-lightbox="lightbox">
+        <img src="./img/nodejs_eventloop.png" width="704" height="364"  />
+    </span>
+    <figcaption>https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick</figcaption>
+</figure></p>
+<p data-ke-size="size16">Python의 asyncio를 이야기할 때 자주 비교되는 대상이 <b>Node.js</b>입니다. Python은 Node.js의 <b>이벤트 루프</b>에서 영향을 받아 asyncio를 도입했다고 해도 과언이 아닙니다. 두 환경의 공통점과 차이를 살펴보겠습니다.</p>
+<h4 data-ke-size="size20"><b>이벤트 루프와 싱글 스레드 아키텍처</b></h4>
+<p data-ke-size="size16"><b>공통점</b></p>
+<p data-ke-size="size16">Node.js와 Python asyncio 모두 <b>이벤트 루프(event loop)</b>가 핵심입니다. 이벤트 루프는 <b>비동기 작업</b>(네트워크 I/O, 타이머 등)의 완료 이벤트를 감지하고 등록된 콜백이나 코루틴을 실행하는 역할을 합니다. 또한 <b>단일 스레드</b> 기반이라는 점도 같습니다. Node.js의 JavaScript 코드 실행은 기본적으로 하나의 쓰레드에서 일어나고, asyncio도 하나의 메인 쓰레드에서 코루틴들을 처리합니다​.</p>
+<p data-ke-size="size16">따라서 <b>하나의 작업이 CPU를 너무 오래 점유하면 다른 작업이 지연된다</b>는 점도 공통됩니다.</p>
+<p data-end="12354" data-start="11595" data-ke-size="size16">&nbsp;</p>
+<p data-end="12354" data-start="11595" data-ke-size="size16"><b>차이점</b></p>
+<p data-end="12354" data-start="11595" data-ke-size="size16"><b>이벤트 루프의 시작과 관리 방식</b>이 다릅니다. Node.js에서는 이벤트 루프가 <b>런타임 자체에 내장</b>되어 있습니다. 즉, Node.js로 실행되는 스크립트는 기본적으로 이벤트 루프 위에서 동작하며, 모든 I/O API가 비동기(논블로킹)로 설계되어 있습니다. 반면 Python에서는 <b>이벤트 루프가 기본 활성화되어 있지 않고</b>, asyncio를 사용할 때 명시적으로 asyncio.run() 등을 호출하여 <b>이벤트 루프를 돌립니다</b>​.</p>
+<p data-end="12354" data-start="11595" data-ke-size="size16">Python은 필요할 때만 이벤트 루프를 &ldquo;켜는&rdquo; 온/오프 개념이고, Node.js는 항상 이벤트 루프가 동작하고 있는 형태라고 볼 수 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-end="12693" data-start="12356" data-ke-size="size16">또 다른 차이는 <b>언어와 런타임의 역사</b>에서 비롯됩니다. Node.js (그리고 브라우저의 JS)는 원래부터 비동기 작업을 <b>콜백</b>으로 처리해왔고, 이후 <b>Promise</b>와 async/await을 도입하여 개선했습니다. Python은 전통적으로 동기/블로킹 함수들이 많고, asyncio 도입 후에도 기존 라이브러리 상당수가 동기 방식으로 남아 있습니다. 그래서 Python 개발자는 <b>동기 코드와 비동기 코드의 호환</b>을 고민해야 하는 경우가 많습니다. (예: Django ORM은 동기이기 때문에 asyncio 웹 서버에서 사용할 때 별도의 쓰레드풀로 돌리는 등 추가 작업이 필요함)</p>
+<h4 data-end="14197" data-start="13593" data-ke-size="size20"><b>성능 및 활용 차이</b></h4>
+<p data-end="14197" data-start="13593" data-ke-size="size16">Node.js와 Python asyncio 중 어떤 것이 성능이 더 좋냐는 단순 비교는 어렵습니다. Node.js는 V8 엔진으로 구동되어 JavaScript가 <b>JIT 컴파일</b>된다는 이점이 있고, Python은 인터프리터라 단순 반복문 같은 CPU 작업은 JS보다 느릴 수 있습니다. 하지만 <b>I/O 처리 성능</b>은 양쪽 다 훌륭하며, 큰 차이가 없습니다. 둘 다 커널 비동기 I/O 기술(epoll 등)을 활용하고 최적화되어 있어 <b>수만 개 소켓 연결 처리도 가능한 수준</b>입니다.</p>
+<p data-end="14197" data-start="13593" data-ke-size="size16"><b>차이가 있다면</b>, Python asyncio는 <b>선택적</b>이므로, 상황에 따라 동기 코드와 혼용이 가능하고 필요시 멀티스레드/멀티프로세스로 전환이 가능합니다. Node.js는 기본적으로 싱글 스레드이므로, CPU-bound 처리에 한계를 느낄 땐 <b>Cluster/fork</b>나 <b>Worker Threads</b> 등을 사용해야 합니다.</p>
+<p data-end="14197" data-start="13593" data-ke-size="size16">결국 Node vs Python asyncio는 <b>동시성 모델의 철학은 비슷</b>하나, Python이 <b>동기와 비동기 모델을 모두 포괄</b>하는 유연함이 있고 Node는 <b>일관되게 비동기</b>라는 차별점이 있습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>asyncio 를 이용하는 방법 (기본 사용법 정리)</b></h2>
+<p data-ke-size="size16">기본적인 <b>코루틴 정의</b>부터 <b>asyncio.run()</b>으로 실행, 여러 코루틴을 한꺼번에 실행하는 <b>asyncio.gather()</b>, 그리고 비동기 <b>반복문(async for)</b>, <b>컨텍스트 매니저(async with)</b>, 마지막으로 <b>코루틴에서의 yield 사용법</b>까지 하나씩 예제 코드와 함께 정리해보겠습니다.</p>
+<h3 data-end="21078" data-start="21043" data-ke-size="size23"><b>코루틴 정의와 asyncio.run()</b></h3>
+<p data-end="21239" data-start="21080" data-ke-size="size16"><b>코루틴(coroutine)</b>은 Python에서 async/await 기능의 핵심 단위입니다. 코루틴은 async def로 정의된 함수로, 호출 시 즉시 실행되는 것이 아니라 <b>코루틴 객체</b>를 반환합니다. 이 코루틴 객체는 <b>&ldquo;미래에 실행될 작업&rdquo;</b>으로 생각하면 됩니다. 아래에 정의된 hello 라는 코루틴을 실제로 <b>실행</b>하려면 이벤트 루프가 필요합니다.</p>
+<pre id="code_1742738689313" class="python" data-ke-language="python" data-ke-type="codeblock"><code>import asyncio
+
+async def hello():
+    print("Hello ...")
+    await asyncio.sleep(1)       # 1초 비동기 대기 (다른 작업에 양보)
+    print("... World!")
+
+# 코루틴 함수를 호출해도 바로 실행되지 않음
+coro = hello()  
+print(coro)  
+# &lt;coroutine object hello at 0x...&gt;</code></pre>
+<p data-ke-size="size16"><b>asyncio.run()</b>은 <b>이벤트 루프를 시작</b>하고 주어진 코루틴을 최종 완료까지 실행해주는 편의 함수입니다​<span data-state="closed"></span><span data-state="closed"></span>. 보통 asyncio.run(main()) 형태로, 하나의 메인 코루틴을 실행하는 데 사용합니다. asyncio.run이 내부에서 이벤트 루프를 새로 만들어 main() 코루틴을 실행하고, 끝나면 루프를 정리해줍니다. Python 3.7+에서 권장되는 진입점 실행 방식이죠.</p>
+<pre id="code_1742738780275" class="python" data-ke-language="python" data-ke-type="codeblock"><code>async def main():
+    print("작업 시작")
+    await hello()            # 위에서 정의한 코루틴을 await로 실행
+    print("모든 작업 완료")
+
+asyncio.run(main())         # 이벤트 루프를 열고 main 코루틴 실행</code></pre>
+<p data-ke-size="size16">위 코드를 실행하면 main() 코루틴 내부에서 await hello()를 만나 hello() 코루틴으로 들어갔다가, hello가 1초 쉬는 동안 다시 main으로 복귀&hellip; 이런 식으로 동작하며, 결과적으로 "Hello ..." (즉시 출력) &rarr; 1초 대기 &rarr; "... World!" &rarr; "모든 작업 완료" 순으로 출력됩니다.</p>
+<p data-end="22641" data-start="22271" data-ke-size="size16">핵심은, <b>await 키워드</b>입니다. await는 <b>코루틴의 실행을 일시 중지하고(await 키워드 뒤의 작업 완료를 기다린 뒤) 다시 재개</b>시킵니다​. await를 호출하면 현재 코루틴은 이벤트 루프에게 제어권을 넘기고, 그 사이에 다른 코루틴이 실행될 수 있습니다.&nbsp;</p>
+<p data-end="22641" data-start="22271" data-ke-size="size16">&nbsp;</p>
+<p data-end="22648" data-start="22643" data-ke-size="size16">흐름을 정리하면 다음과 같습니다.</p>
+<ul style="list-style-type: disc;" data-end="22805" data-start="22650" data-ke-list-type="disc">
+<li data-end="22685" data-start="22650">async def func(): ... : 코루틴 정의.</li>
+<li data-end="22754" data-start="22686">await something : 코루틴 내에서 다른 코루틴/작업이 끝날 때까지 <b>non-blocking 대기</b>.</li>
+<li data-end="22805" data-start="22755">asyncio.run(coro) : 코루틴 실행을 위해 이벤트 루프 생성 및 돌입.</li>
+</ul>
+<h3 data-ke-size="size23"><b>동시에 여러 코루틴 실행: asyncio.gather()와 create_task()</b></h3>
+<p data-ke-size="size16">await를 사용하면 순차적으로 코루틴을 실행하게 됩니다. 만약 여러 코루틴을 <b>동시에 실행</b>하고 싶다면 어떻게 해야 할까요? 대표적으로 <b>asyncio.gather()</b>와 <b>asyncio.create_task()</b>를 활용합니다.</p>
+<ul style="list-style-type: disc;" data-end="23449" data-start="23175" data-ke-list-type="disc">
+<li data-end="23331" data-start="23175"><b>asyncio.create_task(coro)</b>: 주어진 코루틴을 <b>백그라운드 Task</b>로 스케줄링합니다. 즉, 즉시 해당 코루틴 실행을 시작하고, Task 객체를 반환합니다. Task는 미래에 결과를 담게 되는 <b>Future</b>의 한 종류라고 볼 수 있습니다.</li>
+<li data-end="23449" data-start="23333"><b>asyncio.gather(*coros)</b>: 여러 코루틴들을 동시에 실행하고 <b>모두 완료될 때까지 기다린 뒤 결과를 한꺼번에 반환</b>합니다. 내부적으로 각 코루틴을 Task로 만들고 추적합니다.</li>
+</ul>
+<p data-ke-size="size16">3개의 작업을 동시에 실행하여 실행 시간을 단축해보겠습니다. 각 작업은 1초씩 걸린다고 가정합니다:</p>
+<pre id="code_1742739122266" class="python" data-ke-language="python" data-ke-type="codeblock"><code>import asyncio
+import time
+
+async def work(id):
+    print(f"작업 {id} 시작")
+    await asyncio.sleep(1)          # 1초짜리 비동기 작업 (예: 네트워크 요청)
+    print(f"작업 {id} 완료")
+    return id
+
+async def main():
+    start = time.time()
+    # 방법 1: asyncio.gather로 동시에 실행
+    results = await asyncio.gather(work(1), work(2), work(3))
+    end = time.time()
+    print("동시 실행 결과:", results)
+    print(f"총 실행 시간: {end - start:.2f}초")
+
+asyncio.run(main())</code></pre>
+<p data-ke-size="size16">다음과 같은 결과가 출력됩니다.</p>
+<pre id="code_1742739674453" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>작업 1 시작
+작업 2 시작
+작업 3 시작
+작업 1 완료
+작업 2 완료
+작업 3 완료
+동시 실행 결과: [1, 2, 3]
+총 실행 시간: 1.00초 (내외)</code></pre>
+<p data-ke-size="size16">asyncio.gather를 사용하지 않고, create_task를 사용해서 다음과 같이 할 수 있습니다:</p>
+<pre id="code_1742739708062" class="python" data-ke-language="python" data-ke-type="codeblock"><code>async def main():
+    start = time.time()
+    # 방법 2: create_task를 사용하여 태스크 생성 후 개별 await
+    task1 = asyncio.create_task(work(1))
+    task2 = asyncio.create_task(work(2))
+    task3 = asyncio.create_task(work(3))
+    # 이 시점에서 작업들이 백그라운드로 진행 중
+    result1 = await task1
+    result2 = await task2
+    result3 = await task3
+    end = time.time()
+    print("동시 실행 결과:", [result1, result2, result3])
+    print(f"총 실행 시간: {end - start:.2f}초")</code></pre>
+<p data-ke-size="size16"><b>create_task로 태스크를 생성하면 즉시 작업이 시작</b>되므로, 바로 await를 하지 않고 있다면 다른 코드도 동시에 실행될 수 있습니다. 위 예에서 task1 생성 후 task2를 생성하는 동안도 task1의 작업은 진행 중입니다. 결국 await task1 등을 통해 결과를 모을 때까지 3개 작업이 병행되는 것이죠. asyncio.gather는 이런 패턴을 한 줄로 축약한 것이라 볼 수 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-end="25061" data-start="24857" data-ke-size="size16"><b>에러 처리</b></p>
+<p data-end="25061" data-start="24857" data-ke-size="size16">asyncio.gather는 기본적으로 내부 태스크 중 하나에서 예외가 발생하면 즉시 예외를 전파하고 다른 태스크도 취소합니다. 반면 return_exceptions=True 옵션을 주면, 예외도 결과로 모아서 반환해줍니다. 일반적으로는 예외 처리를 개별 코루틴 내에서 하거나, gather 바깥에서 try/except로 묶어 처리합니다.</p>
+<p data-end="25061" data-start="24857" data-ke-size="size16">&nbsp;</p>
+<p data-end="25204" data-start="25063" data-ke-size="size16"><b>asyncio.wait</b></p>
+<p data-end="25204" data-start="25063" data-ke-size="size16">gather와 비슷한 asyncio.wait도 있는데, 이건 태스크 집합을 주면 완료된 것과 안 된 것을 구분해서 돌려주는 저수준 함수입니다. 대부분의 경우 gather가 더 편리하고, Python 공식문서에서도 저수준 API를 직접 다루는 것을 권장하지 않기 때문에 깊이 다루지 않겠습니다.</p>
+<h3 data-ke-size="size23"><b>비동기 이터레이션: async for (비동기 제너레이터)</b></h3>
+<p data-ke-size="size16"><b>async for</b>는 <b>비동기 이터레이터/제너레이터</b>와 함께 사용되는 구문입니다. 일반적인 for문은 이터레이터의 __iter__/__next__를 호출해 동작하는데, <b>비동기 이터레이터</b>는 __anext__라는 <b>비동기(next) 메서드</b>를 가집니다. 그리고 async for 루프는 이 __anext__가 반환하는 <b>코루틴을 await</b>하면서 루프를 돕니다. 말이 어렵지만, 실제로 언제 쓰이냐 하면</p>
+<ul style="list-style-type: disc;" data-end="25680" data-start="25503" data-ke-list-type="disc">
+<li data-end="25633" data-start="25503">파일이나 소켓에서 비동기적으로 한 줄씩 읽어들일 때 (aiofiles나 asyncio.StreamReader 등은 async iterator를 지원하여 async for line in reader 형태로 쓸 수 있음).</li>
+<li data-end="25680" data-start="25634">대기 시간이 있는 데이터를 스트리밍 받을 때 (예: 비동기 발생 이벤트 소비)</li>
+</ul>
+<p data-end="25916" data-start="25682" data-ke-size="size16">아울러 <b>비동기 제너레이터(async generator)</b>도 있습니다. 이는 async def 함수 안에서 yield 키워드를 써서 <b>비동기적으로 값을 순차 생성</b>하는 함수입니다. <a href="https://peps.python.org/pep-0525/" target="_blank" rel="noopener">PEP 525</a>에 도입된 기능으로, 이러한 함수는 호출 시 <b>AsyncGenerator</b> 객체를 반환하며, 이는 앞서 말한 비동기 이터레이터 프로토콜을 따릅니다. 비동기 제너레이터는 async for로 순회해야 합니다.</p>
+<p data-end="25916" data-start="25682" data-ke-size="size16">&nbsp;</p>
+<p data-end="25916" data-start="25682" data-ke-size="size16">간단한 비동기 제너레이터와 async for 사용법을 보겠습니다</p>
+<pre id="code_1742740107202" class="python" data-ke-language="python" data-ke-type="codeblock"><code># 비동기 제너레이터 함수 정의
+async def async_count(stop):
+    for i in range(stop):
+        await asyncio.sleep(1)   # 매 반복마다 1초 비동기 대기
+        yield i                 # 값을 산출 (yield) - async generator
+
+async def main():
+    # async for를 사용하여 비동기 제너레이터로부터 값 받기
+    async for num in async_count(3):
+        print(f"{num} 출력 (시간: {time.time():.0f})")
+
+asyncio.run(main())</code></pre>
+<p data-ke-size="size16">각 숫자가 1초 간격으로 출력되는 것을 볼 수 있습니다. async_count 함수는 매 loop마다 await asyncio.sleep(1)으로 1초 쉬고 yield i로 값을 내보냅니다. 이처럼 <b>async def 내에서 yield를 쓰면</b> 일반 함수의 제너레이터와 달리 <b>Async Generator</b>가 됩니다. 그리고 async for num in async_count(3) 구문이 내부적으로 다음과 같이 동작합니다. 개발자는 async for 구문만 써주면 이런 복잡한 처리가 자동으로 이루어집니다.</p>
+<pre id="code_1742740200869" class="python" data-ke-language="python" data-ke-type="codeblock"><code>iterator = async_count(3).__aiter__()
+while True:
+    try:
+        num = await iterator.__anext__()
+    except StopAsyncIteration:
+        break
+    # loop body
+    print(num)</code></pre>
+<h3 data-ke-size="size23"><b>비동기 컨텍스트 매니저: async with</b></h3>
+<p data-ke-size="size16">async with 구문은 <b>비동기 컨텍스트 매니저</b>를 사용할 때 쓰입니다. 일반적인 with 문은 객체의 __enter__와 __exit__를 호출해서 자원 관리를 하는데, 비동기 상황에서는 __aenter__와 __aexit__라는 비동기 메서드를 사용합니다. 예를 들어, <b>asyncio.Lock</b>은 비동기 락 객체인데, 이것을 async with로 획득/해제할 수 있습니다​<span data-state="closed"></span><span data-state="closed"></span>. 또 aiohttp의 ClientSession이나 데이터베이스의 AsyncSession 등도 async with로 열고 닫는 처리를 합니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>참고</b></h2>
+<p data-ke-size="size16"><b>Python document, asyncio: <a href="https://docs.python.org/ko/3/library/asyncio.html" target="_blank" rel="noopener&nbsp;noreferrer">https://docs.python.org/ko/3/library/asyncio.html</a></b></p>
+<p data-ke-size="size16"><b>Python document, corruines and task: <a href="https://docs.python.org/3/library/asyncio-task.html#coroutine" target="_blank" rel="noopener&nbsp;noreferrer">https://docs.python.org/3/library/asyncio-task.html#coroutine</a></b></p>
+<p data-ke-size="size16"><b>Python document, eventloop: <a href="https://docs.python.org/3/library/asyncio-eventloop.html" target="_blank" rel="noopener&nbsp;noreferrer">https://docs.python.org/3/library/asyncio-eventloop.html</a></b></p>
+<p data-ke-size="size16"><b>Python Asyncio vs Threading: <a href="https://www.geeksforgeeks.org/asyncio-vs-threading-in-python/" target="_blank" rel="noopener&nbsp;noreferrer">https://www.geeksforgeeks.org/asyncio-vs-threading-in-python/</a></b></p>
+<p data-ke-size="size16"><b>Async IO in Python: A Complete Walkthrough: <a href="https://www.geeksforgeeks.org/asyncio-vs-threading-in-python/" target="_blank" rel="noopener&nbsp;noreferrer">https://www.geeksforgeeks.org/asyncio-vs-threading-in-python/</a></b></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #python asyncio #python asyncio 왜? #python vs node #python eventloop #python asyncio tip 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

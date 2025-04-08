@@ -1,0 +1,67 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>python gRPC (3) - gRPC 어떻게 테스트할까?</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">python gRPC (3) - gRPC 어떻게 테스트할까?</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/python gRPC</p>
+                                    <p class="date">2025-03-09 19:48:36</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="280" height="280" >
+    <span data-lightbox="lightbox">
+        <img src="./img/gRPC-image.png" width="280" height="280"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">gRPC를 처음도입했을때 저는 이게 제대로 동작이나 할까? 걱정스러웠습니다. 그렇기 때문에 gRPC를 어떻게 테스트해야할지 찾아봤고, 그때 공부한 내용을 정리해보려고 합니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 style="color: #000000;" data-ke-size="size26"><b>Unit Test</b></h2>
+<p data-ke-size="size16">gRPC는 서버와 클라이언트 양쪽 모두에 대해 테스트가 필요합니다. 서버 테스트는 보통 로직이 단순하여 쉽게 진행할 수 있으므로, 여기서는 클라이언트 테스트에 초점을 맞춥니다. 클라이언트 테스트의 가장 큰 도전은 실제 외부 시스템(즉, gRPC 서버)이 없는 환경에서도 클라이언트의 동작을 검증해야 한다는 점입니다. 이러한 상황에서<span>&nbsp;</span><b>Mock</b>과<span>&nbsp;</span><b>Stub</b>개념이 유용하게 사용됩니다.</p>
+<h3 style="color: #000000;" data-ke-size="size23"><br /><b>Mock과&nbsp;Stub의&nbsp;개념</b></h3>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>Stub:</b> Stub은 테스트 대상 코드가 호출하는 외부 시스템의 간단한 구현체입니다. 실제 로직 대신, 미리 정의된 응답을 반환하도록 설계되어 있습니다. 단, gRPC에서는 클라이언트에서 이미 Stub이라는 용어가 자동 생성된 클라이언트 인터페이스를 가리키기 때문에, 혼동을 피하기 위해 때때로 'Fake' 또는 'Test Double'이라는 용어를 사용하기도 합니다.</li>
+<li><b>Mock:</b> Mock 객체는 단순히 미리 정의된 응답을 제공하는 것을 넘어, 테스트 대상 코드와의 상호작용(예: 메서드 호출, 인자 전달, 호출 순서 등)을 검증할 수 있게 도와줍니다. 이를 통해 클라이언트가 외부 시스템에 올바른 요청을 보내고 있는지 확인할 수 있습니다.</li>
+</ul>
+<h3 style="color: #000000;" data-ke-size="size23"><b>gRPC 클라이언트 테스트에 적용</b></h3>
+<p data-ke-size="size16">예를&nbsp;들어,&nbsp;gRPC&nbsp;클라이언트가&nbsp;호출하는&nbsp;서비스&nbsp;메서드를&nbsp;테스트할&nbsp;때,&nbsp;실제&nbsp;네트워크&nbsp;호출&nbsp;대신에&nbsp;Stub(또는&nbsp;Fake)&nbsp;객체를&nbsp;주입하여&nbsp;미리&nbsp;정의된&nbsp;응답을&nbsp;반환하도록&nbsp;설정합니다.&nbsp;이를&nbsp;통해&nbsp;테스트&nbsp;환경에서&nbsp;외부&nbsp;시스템의&nbsp;영향&nbsp;없이&nbsp;클라이언트&nbsp;로직만을&nbsp;독립적으로&nbsp;검증할&nbsp;수&nbsp;있습니다. 또한,&nbsp;Mock&nbsp;객체를&nbsp;활용하여,&nbsp;클라이언트가&nbsp;예상대로&nbsp;메서드를&nbsp;호출하는지,&nbsp;올바른&nbsp;인자를&nbsp;전달하는지&nbsp;등을&nbsp;확인할&nbsp;수&nbsp;있습니다.<br />이와&nbsp;같이,&nbsp;외부&nbsp;시스템이&nbsp;존재하는&nbsp;상황에서도&nbsp;테스트를&nbsp;원활하게&nbsp;진행하기&nbsp;위해,&nbsp;**Mock**과&nbsp;**Stub**(또는&nbsp;Fake)&nbsp;개념을&nbsp;적절히&nbsp;활용하는&nbsp;것이&nbsp;gRPC&nbsp;클라이언트&nbsp;테스트의&nbsp;핵심&nbsp;전략입니다.<br /><br />gRPC&nbsp;는&nbsp;서버와&nbsp;클라이언트&nbsp;입장에서&nbsp;모두&nbsp;테스트가&nbsp;필요할&nbsp;것입니다.&nbsp;하지만&nbsp;서버&nbsp;입장에서의&nbsp;테스트는&nbsp;비교적&nbsp;손쉽게&nbsp;할&nbsp;수&nbsp;있기&nbsp;때문에&nbsp;굳이&nbsp;다루지&nbsp;않겠습니다.&nbsp;그나마&nbsp;조금&nbsp;번거로워지는건&nbsp;클라이언트&nbsp;입장에서의&nbsp;테스트입니다.&nbsp;외부&nbsp;시스템(gRPC서버)가&nbsp;있다고&nbsp;전재하고&nbsp;테스트를&nbsp;해야하기&nbsp;때문이지요.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h2 style="color: #000000;" data-ke-size="size26"><b>E2E Test</b></h2>
+<p data-ke-size="size16">&nbsp;</p>
+<hr contenteditable="false" data-ke-style="style5" data-ke-type="horizontalRule" />
+<h2 style="color: #000000;" data-ke-size="size26"><b>참고</b></h2>
+<p style="color: #333333; text-align: start;" data-ke-size="size16"><b>Python gRPC Test:<span>&nbsp;</span><a href="https://grpc.github.io/grpc/python/grpc_testing.html">https://grpc.github.io/grpc/python/grpc_testing.html</a></b></p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">&nbsp;</p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">&nbsp;</p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #grpc #python grpc 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,128 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>FastAPI 표준 프로젝트 구조</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">FastAPI 표준 프로젝트 구조</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/FastAPI</p>
+                                    <p class="date">2024-11-19 14:16:10</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16">python(스크립트 언어) + 역사가 짧은 프레임워크의 조합이 FastAPI 라는 프레임워크이기 때문에 FastAPI 를 사용하는 개발자들에게는 도전적이고 창의적인 다양한 시도가 가능한 환경이 만들어질것이다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그럼에도 불구하고 <b><code>표준적인 프로젝트 구조</code></b>가 있을것이라고 생각한 이유는 백엔드, 특히 API 서버의 역할은 상당히 정형화되어 있기 때문이다.&nbsp; 표준적인 프로젝트 구조를 지킴으로써 새롭게 합류할 인원이나 미래의 나에게도 도움이 될 것이다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23"><b>1. 공식문서 찾아보기</b></h3>
+<p data-ke-size="size16">FastAPI 의 tutorial 공식 문서의 <a href="https://fastapi.tiangolo.com/ko/tutorial/bigger-applications/#another-module-with-apirouter">Bigger Application</a> 파트에 공식문서가 제시하는 표준적인 프로젝트 구조가 제시되어 있으며 그 구조는 아래와 같다. (*해당 공식문서에는 더 다양한 팁들이 공유되어 있다. 읽어볼만하다.)</p>
+<pre class="bash" data-ke-language="bash"><code>.
+├── app    # app 모듈
+│   ├── __init__.py
+│   ├── main.py      # app 모듈 진입점, 보통 FastAPI 인스턴스를 정의한다.
+│   ├── dependencies.py    # app 모듈 전반에 걸쳐 사용될 의존성을 정의한다. @configuration 과 비슷하다.
+│   └── routers    # spring 의 @controller 와 같은 역할을 수행한다.
+│   │   ├── __init__.py
+│   │   ├── items.py
+│   │   └── users.py
+│   └── internal # template engine 으로 구현된 어드민 화면
+│       ├── __init__.py
+│       └── admin.py</code></pre>
+<p data-ke-size="size16">controller 대신 routers 라는 용어를 사용하고, app 수준에서 사용하는 의존성을 dependencies 라는 파이썬 파일에서 관리한다. JAVA 와 다른 점은 클래스가 아니라 함수로 정의하고 그 함수를 주입하는 식으로 동작하는 것이다.</p>
+<pre class="python"><code># app.dependencies.py
+
+from typing import Annotated
+
+from fastapi import Header, HTTPException
+
+
+async def get_token_header(x_token: Annotated[str, Header()]):
+    if x_token != "fake-super-secret-token":
+        raise HTTPException(status_code=400, detail="X-Token header invalid")</code></pre>
+<pre class="python" data-ke-language="python"><code># app.routers.items.py
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.dependencies import get_token_header
+
+router = APIRouter(
+    prefix="/items",
+    tags=["items"],
+    dependencies=[Depends(get_token_header)],
+    responses={404: {"description": "Not found"}},
+)
+
+
+fake_items_db = {"plumbus": {"name": "Plumbus"}, "gun": {"name": "Portal Gun"}}
+
+
+@router.get("/")
+async def read_items():
+    return fake_items_db</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">공식문서에 나와있는 구조가 Bigger Application 을 위한 구조라고 하지만 여전히 부족한것 같다. router 는 요청과 응답 처리에 충실하고 비즈니스 로직을 구현하는 다른 곳이 있어야 할것 같은데 그 부분이 누락되어있다. 더 도전적이도 창의적인 시도를 위해서 열어둔 것일까? 하지만 창의성은 갑자기 생겨나는게 아니다. 다른 참고자료들을 찾아보자</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23"><b>2. 보일러 플레이트 찾아보기</b></h3>
+<h4 data-ke-size="size20"><b>2.1. 첫번째 보일러 플레이트</b></h4>
+<p data-ke-size="size16">FastAPI 보일러 플레이트를 공유하는 레딧을 통해 관련 github 을 찾았다. [<a href="https://github.com/teamhide/fastapi-boilerplate" target="_blank" rel="noopener">FastAPI-Boilterplate link</a>]&nbsp; 에서 확인할 수 있다. 이 보일러플레이트는 ratelimit, cache 를 아우르는 조금 더 큰 규모이다.</p>
+<pre id="code_1731995371565" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>├── src
+│&nbsp;&nbsp; ├── alembic.ini
+│&nbsp;&nbsp; ├── app
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── main.py
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── api
+│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── dependencies.py
+│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; └── v1
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── core
+│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── config.py
+│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── db
+│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── exceptions
+│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── utils
+│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; └── worker
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── crud
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── middleware
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── models
+│&nbsp;&nbsp; │&nbsp;&nbsp; └── schemas
+│&nbsp;&nbsp; ├── migrations
+│&nbsp;&nbsp; │&nbsp;&nbsp; └── versions
+│&nbsp;&nbsp; │&nbsp;&nbsp;     └── README.MD
+│&nbsp;&nbsp; └── scripts
+└── tests
+    └── helpers</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">router 라는 이름보다는 api 를 사용했고, 버전을 나눴다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">app.api 수준에서 dependency 를 정의했다. FastAPI 가 APIRouter 수준에서 의존성을 설정할 수 있는 기능을 제공하기 때문에 모듈의 응집성을 고려한 배치로 보인다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">app.core.config.py 에서 pydantic_settings 의 BaseSettings 를 이용하여 project 정보, DB 연결 정보, 캐시 정보 등을 담은 class 를 정의한다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20"><b>2.2 두번째 보일러 플레이트</b></h4>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23"><b>3. 결론</b></h3>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

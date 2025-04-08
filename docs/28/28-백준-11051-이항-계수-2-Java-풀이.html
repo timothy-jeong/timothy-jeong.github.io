@@ -1,0 +1,104 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>백준 11051 이항 계수 2 Java 풀이</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">백준 11051 이항 계수 2 Java 풀이</h2>
+                                <div class="box-info">
+                                    <p class="category">알고리즘/문제 풀이</p>
+                                    <p class="date">2024-11-02 10:02:24</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="350" height="350" >
+    <span data-lightbox="lightbox">
+        <img src="./img/DALL&middot;E 2024-11-02 08.16.08 - A simple, humorous illustration of a stick figure (stickman) choosing between two options. The stick figure is standing in front of two clearly marked.webp" width="350" height="350"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<h2 data-ke-size="size26">문제</h2>
+<p data-ke-size="size16">n 개중에 k 개를 고르는 이항계수(Binomial Coefficient) 를 구하는 문제이다. 결과값을 10007 로 나눈 나머지를 출력한다.</p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">제약사항: 1 &lt;= n &lt;= 1000, 0 &lt;= k &lt;= n</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">출처: <a href="https://www.acmicpc.net/problem/11051" target="_blank" rel="noopener&nbsp;noreferrer">https://www.acmicpc.net/problem/11051</a></p>
+<h2 data-ke-size="size26">접근</h2>
+<p data-ke-size="size16"><a href="https://probehub.tistory.com/27" target="_blank" rel="noopener">이항 계수1 풀이</a>와 마찬가지로 조합의 정의를 이용한 접근, 그리고&nbsp; 이항계수의 정의를 이용한 접근 모두 사용해볼 수 있겠다.</p>
+<p data-ke-size="size16">하지만 조합의 정의를 이용했을 경우에는 모듈러 연산이 복잡해지므로 이 단계에서는 간단한 모듈러 정의만 이용하기 위해 이항계수의 정의를 이용한 풀이만 소개한다.</p>
+<p data-ke-size="size16"><br /><b>모듈러 연산의 특징</b> 을 고려해서 코드를 약간 변형해줘야한다.</p>
+<div style="background-color: #f0f0f0; padding: 16px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+<p data-ke-size="size16">모듈러 연산의 특징</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>덧셈에 대한 모듈러</b>: <span><span>(a+b) %&thinsp;&thinsp;m =((a %&thinsp;m) + (b %&thinsp;&thinsp;m)) %&thinsp;&thinsp;m</span></span></li>
+<li><b>곱셈에 대한 모듈러</b>: <span><span>(a*b) %&thinsp;&thinsp;m =((a %&thinsp;m) * (b %&thinsp;&thinsp;m)) %&thinsp;&thinsp;m</span></span></li>
+</ul>
+</div>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">다음 글인 이항 계수 3 풀이에서는 페르마 소정리에 의한 풀이가 강제되므로 조금 더 어려운 모듈러 연산을 이용해보자</p>
+<h2 data-ke-size="size26">풀이</h2>
+<h3 data-ke-size="size23">이항계수의 정의와 모듈러 연산의 특징을 이용</h3>
+<pre id="code_1730598034768" class="java" data-ke-language="java" data-ke-type="codeblock"><code>import java.util.Scanner;
+
+public class Main {
+    private final static int SIZE = 1000;
+    private final static int MOD = 10007;
+    private final static long[][] CACHE = new long[SIZE+1][SIZE+1];
+
+    public static void main(String[] args) {
+        for (int i = 0; i &lt;= SIZE; i++) {
+            CACHE[i][0] = 1;
+            CACHE[i][i] = 1;
+        }
+
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        int k = sc.nextInt();
+        System.out.println(binomialCoefficient(n, k));
+    }
+
+    private static long binomialCoefficient(int n, int k) {
+        for (int i = 1; i &lt;= n; i++) {
+            for (int j = 1; j &lt;= Math.min(i, k); j++) {
+                CACHE[i][j] = (CACHE[i-1][j] + CACHE[i-1][j-1]) % MOD;
+            }
+        }
+        return CACHE[n][k];
+    }
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">CACHE[i][j] 는 i 개중에 j 개를 추출하는 이항계수의 값이고 이 값은 이항계수의 정의, <span style="background-color: #dddddd;">'<span style="color: #353638; text-align: left;">n 개중에서 k 개를 뽑아내는 방법은 'n-1 개중 k 개를 뽑아내는 방법' 과 'n-1 개중 k-1 개를 뽑아내는 방법'의 개수의 합과 같다.</span>'</span> 에 의해 계산된다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이러한 각 계산값<span style="color: #333333; text-align: start;">에 모듈러 연산을 해주는 과정에서 <span style="background-color: #dddddd;">각각의 CACHE[i-1][j] 와 CACHE[i-1][j-1]는 이미 내재적으로 모듈러 연산이 되어있는 상태로 보기 때문</span>에 그들을 % MOD 해주는 것으로 자연스럽게 덧셈에 대한 모듈러 연산 조건을 충족하게 된다.</span></p>
+<pre id="code_1730598136860" class="java" data-ke-language="java" data-ke-type="codeblock"><code>CACHE[i][j] = (CACHE[i-1][j] + CACHE[i-1][j-1]) % MOD;</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #백준 10051 #백준 10051 java #백준 이항계수 2 #백준 이항 계수 2 java 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

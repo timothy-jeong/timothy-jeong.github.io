@@ -1,0 +1,196 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>Python 가변 객체와 불변 객체</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">Python 가변 객체와 불변 객체</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/python</p>
+                                    <p class="date">2024-11-17 15:23:23</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="350" height="350" >
+    <span data-lightbox="lightbox">
+        <img src="./img/DALL&middot;E 2024-11-17 15.56.48 - An abstract visual representation of Python's mutable and immutable objects. On one side, depict a dynamic, changeable object like a colorful, shiftin.webp" width="350" height="350"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<h2 data-ke-size="size26">Python의 가변 객체와 불변 객체</h2>
+<p data-ke-size="size16">Python에서 객체는 <b>가변 객체(Mutable Objects)</b>와 <b>불변 객체(Immutable Objects)</b>로 나눌 수 있다. 이 두 가지는 객체의 <b>값을 변경할 수 있는지 여부</b>에 따라 구분되며, 메모리 관리와 성능에 중요한 영향을 미친다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h3 data-ke-size="size23">1. 가변 객체 (Mutable Objects)</h3>
+<h4 data-ke-size="size20">특징</h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>값(내용)을 변경할 수 있음.</li>
+<li>동일한 객체를 참조하는 변수는 변경 사항을 공유.</li>
+<li>대표적인 가변 객체:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><code>list</code>&nbsp;리스트</li>
+<li><code>dict</code> 딕셔너리</li>
+<li><code>set</code>&nbsp;세트</li>
+<li>사용자 정의 클래스 객체</li>
+</ul>
+</li>
+</ul>
+<h4 data-ke-size="size20">예제</h4>
+<pre class="gml"><code>x = [1, 2, 3]  # 리스트 객체 생성
+y = x           # x와 y는 같은 객체를 참조
+x.append(4)     # x의 값을 변경
+
+print(x)  # 출력: [1, 2, 3, 4]
+print(y)  # 출력: [1, 2, 3, 4] (y도 동일한 객체를 참조하므로 변경됨)
+print(x is y)  # 출력: True (x와 y는 같은 객체)</code></pre>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">2. 불변 객체 (Immutable Objects)</h3>
+<h4 data-ke-size="size20">특징</h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>값(내용)을 변경할 수 없음.</li>
+<li>새로운 값을 할당하면 새로운 객체가 생성.</li>
+<li>동일한 값을 가진 불변 객체는 객체를 재사용할 수 있음 (Python 내부 최적화).</li>
+<li>대표적인 불변 객체:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><code>int</code>&nbsp;정수</li>
+<li><code>float</code>&nbsp;실수</li>
+<li><code>str</code> 문자열</li>
+<li><code>tuple</code> 튜플</li>
+</ul>
+</li>
+</ul>
+<h4 data-ke-size="size20">예제</h4>
+<pre class="makefile"><code>a = 10          # 정수 객체 생성
+b = 10          # 동일한 값을 참조 (Python 내부 캐싱)
+c = int(10)     # 동일한 값을 참조
+
+print(a is b)   # 출력: True (a와 b는 같은 객체를 참조)
+print(a is c)   # 출력: True (Python은 동일한 값을 재사용)
+print(a == c)   # 출력: True (값이 동일)
+
+x = "hello"
+y = "hello"
+z = "".join(["h", "e", "l", "l", "o"])  # 새로운 문자열 생성
+
+print(x is y)   # 출력: True (문자열 캐싱으로 인해 같은 객체를 참조)
+print(x is z)   # 출력: False (z는 새로 생성된 객체)
+print(x == z)   # 출력: True (값은 동일)</code></pre>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">3. <code>is</code>와 <code>==</code>의 차이</h3>
+<p data-ke-size="size16">이미 위의 예제에서 계속해서 사용했으므로 is 와 == 가 무엇이 다른지 궁금할 수 있다.</p>
+<h4 data-ke-size="size20"><code>is</code> (식별자 비교)</h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>두 변수가 <b>같은 객체(메모리 주소)</b>를 참조하는지 비교.</li>
+<li>불변 객체와 가변 객체 모두 동일하게 동작.</li>
+</ul>
+<pre class="java" data-ke-language="java"><code>x = [1, 2, 3]
+y = x
+z = [1, 2, 3]
+
+print(x is y)  # 출력: True (x와 y는 같은 객체)
+print(x is z)  # 출력: False (x와 z는 다른 객체)
+
+# 변수가 참조하는 메모리 값은 id() 로 확인할 수 있다.
+
+print(id(x)) # 1231 (예를들어...)
+print(id(y)) # 1231
+print(id(z)) # 4412</code></pre>
+<h3 data-ke-size="size23"><code>==</code> (값 비교)</h3>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>두 객체의 <b>값(내용)</b>이 같은지 비교.</li>
+<li>Python은 기본적으로 <code>__eq__</code> 메서드를 호출하여 값 비교를 수행.</li>
+</ul>
+<pre class="angelscript"><code>x = [1, 2, 3]
+z = [1, 2, 3]
+
+print(x == z)  # 출력: True (리스트의 값이 동일)</code></pre>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">4. 가변 객체와 불변 객체의 차이 요약</h3>
+<table style="height: 77px;" data-ke-align="alignLeft" data-ke-style="style12">
+<thead>
+<tr style="height: 20px;">
+<th style="height: 20px;"><b>특징</b></th>
+<th style="height: 20px;"><b>가변 객체 (Mutable)</b></th>
+<th style="height: 20px;"><b>불변 객체 (Immutable)</b></th>
+</tr>
+</thead>
+<tbody>
+<tr style="height: 19px;">
+<td style="height: 19px;"><b>값 변경 가능 여부</b></td>
+<td style="height: 19px;">변경 가능</td>
+<td style="height: 19px;">변경 불가능</td>
+</tr>
+<tr style="height: 19px;">
+<td style="height: 19px;"><b>객체 재사용 여부</b></td>
+<td style="height: 19px;">동일 값이어도 새로운 객체 생성</td>
+<td style="height: 19px;">동일 값일 경우 객체 재사용 가능</td>
+</tr>
+<tr style="height: 19px;">
+<td style="height: 19px;"><b>대표적인 예</b></td>
+<td style="height: 19px;"><code>list</code>, <code>dict</code>, <code>set</code></td>
+<td style="height: 19px;"><code>int</code>, <code>str</code>, <code>tuple</code></td>
+</tr>
+</tbody>
+</table>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">5. 가변 객체와 불변 객체의 장단점</h3>
+<table style="border-collapse: collapse; width: 100%; height: 70px;" border="1" data-ke-align="alignLeft" data-ke-style="style12">
+<tbody>
+<tr style="height: 19px;">
+<td style="width: 9.53485%; height: 19px;">&nbsp;</td>
+<td style="width: 32.3257%; height: 19px; text-align: center;"><b>가변 객체</b></td>
+<td style="width: 33.1395%; height: 19px; text-align: center;"><b>불변 객체</b></td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 9.53485%; height: 17px; text-align: center;"><b>장점</b></td>
+<td style="width: 32.3257%; height: 17px;"><span>- 값을 직접 변경할 수 있으므로 메모리 사용량 줄일 수 있음.<br /></span>- <span>리스트나 딕셔너리처럼 유연하게 수정이 필요한 경우 적합.</span></td>
+<td style="width: 33.1395%; height: 17px;">- <span>값이 변경되지 않으므로<span>&nbsp;</span><b>안정성</b>이 보장됨.<br /></span>- <span>해시 가능하여 딕셔너리의 키나<span>&nbsp;</span>set의 요소로 사용 가능.</span></td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 9.53485%; height: 17px; text-align: center;"><b>단점</b></td>
+<td style="width: 32.3257%; height: 17px;">- <span>동일한 객체를 참조하는 변수들 간의 변경 사항이 공유되어<span>&nbsp;</span><b>예상치 못한 부작용(side effect)</b>을 초래할 수 있음.</span></td>
+<td style="width: 33.1395%; height: 17px;">- <span>값을 변경하려면 새로운 객체를 생성해야 하므로 메모리 사용량 증가 가능.</span></td>
+</tr>
+</tbody>
+</table>
+<p data-ke-size="size16">&nbsp;</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">6. 가변 객체와 불변 객체의 활용</h3>
+<h4 data-ke-size="size20">가변 객체 활용</h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>데이터의 값을 자주 수정해야 하는 경우 (예: 리스트에서 데이터를 추가/삭제).</li>
+<li>상태를 유지하면서 동적으로 변경이 필요한 경우.</li>
+</ul>
+<h4 data-ke-size="size20">불변 객체 활용</h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>딕셔너리의 키</b> 또는 <b>집합의 요소</b>로 사용해야 하는 경우 (해시 가능 필요).</li>
+<li>데이터가 변경되지 않아야 하거나 안정성이 중요한 경우.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<p data-ke-size="size16">Python의 가변 객체와 불변 객체를 이해하면 메모리 사용과 성능을 최적화할 수 있으며, 코드의 안정성을 높일 수 있습니다. <b>가변 객체와 불변 객체를 적절히 활용하여 효율적이고 Pythonic한 코드를 작성해보세요!</b></p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #python 불변 객체 #python 가변 객체 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

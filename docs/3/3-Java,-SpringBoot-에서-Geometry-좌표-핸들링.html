@@ -1,0 +1,283 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>Java, SpringBoot 에서 Geometry 좌표 핸들링</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">Java, SpringBoot 에서 Geometry 좌표 핸들링</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/개발 탐구</p>
+                                    <p class="date">2024-02-09 18:47:18</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="650" height="371" >
+    <span data-lightbox="lightbox">
+        <img src="./img/DALL&amp;amp;amp;amp;amp;middot;E 2024-02-09 18.43.05 - Create an image of a developer working in a casual, yet productive home office environment. The developer is focused on their computer, which has mult.webp" width="650" height="371"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">프롭테크 회사를 다니다보니 지도 서비스를 자주 다룹니다.</p>
+<p data-ke-size="size16">당연히 클라이언트 개발자가 지도 서비스를 더 많이 다루고 고생하는 분야이지만 필지, 행정동, 법정동의 모양정보(이하 공간데이터)를 뿌려주는 역할은 백엔드에서도 해야할 일이 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">백엔드 개발자라면 공간데이터 타입을 어떻게 DB 에 보관할지 궁금하는지, 내부 처리 성능은 어떠한지 궁금할 것입니다.</p>
+<p data-ke-size="size16">이것 역시 다루고 싶은 주제지만 이 글에서는 공간데이터를 지도에 뿌리는 정도가 관심사이기 때문에 어떻게 보관하든 큰 문제는 아니겠죠.&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h3 data-ke-size="size23">Geometry 정보를 전달하는 방식</h3>
+<p data-ke-size="size16">그렇다면 DBMS 에 보관된 공간데이터를 어떤식으로 뿌릴까를 이야기해보겠습니다.</p>
+<p data-ke-size="size16">여러 부동산 서비스의 클라이언트-서버 통신을 분석해보면 공간데이터를 뿌리는 방식은 크게 두가지로 나뉘는것 같습니다.</p>
+<p data-ke-size="size14">(물론 더 다양한 방식이 있을 수 있습니다.)</p>
+<p data-ke-size="size14">&nbsp;</p>
+<h4 data-ke-size="size20"><span style="background-color: #ffffff; color: #000000; text-align: start;">WKT 를 그대로 주는 방식</span></h4>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #000000; text-align: start;">WKT 란 Well-Known Text 를 줄인말로 공간데이터를 글자로 적는것을 뜻합니다.&nbsp; <span style="background-color: #ffffff; color: #161616; text-align: start;"><b>SQL/MM Part: 3 Spatia</b> 이라는 표준에 의해 비교적 이해하기 쉬운 형태로 옮겨집니다.</span></span></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #000000; text-align: start;"><span style="background-color: #ffffff; color: #161616; text-align: start;">이곳에서는 대표적인 DBMS 의 공간데이터 타입(Spatial Data Type) 은 공식문서를 참조해주시고, 각 공간데이터 타입에 따라서 서로다른 Heading 글자와 숫자 뭉치가 딸려나오는 구조라고 보시면 되겠습니다.</span></span></p>
+<p data-ke-size="size14">(<a href="https://dev.mysql.com/doc/refman/8.0/en/spatial-type-overview.html" target="_blank" rel="noopener">MySQL 8 공식문서</a>), (<a href="https://learn.microsoft.com/en-us/sql/relational-databases/spatial/spatial-data-types-overview?view=sql-server-ver16" target="_blank" rel="noopener">SQL Server 16 공식문서</a>), (<a href="https://www.postgresql.org/docs/current/datatype-geometric.html" target="_blank" rel="noopener">PostgreSQL 16 공식문서</a>) 여담이지만 PostgreSQL 혼자 튀는 공간데이터 타입을 정의하고있네요.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">Polygon (닫혀있는 범위를 지정한 공간데이터) 는 이런식으로 표현하는 것입니다.</p>
+<pre id="code_1707467903370" class="javascript" data-ke-language="javascript" data-ke-type="codeblock"><code>POLYGON((126.96736607963692 37.59212327805168,126.96755518953367 37.59208098633907,....))</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #000000; text-align: start;">앞에 POLYGON 이라는 것을 명시하여 이 뒤에 오는 숫자들이 어떤 형상을 만들지 미리 알려주고, 숫자들은 위도, 경도로 우리가 이미 잘 아는 좌표체계를 나타내고 있죠.&nbsp;</span></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #000000; text-align: start;">서버에서는 이러한 텍스트 뭉치를 그대로 클라이언트로 전달해주고, 클라이언트는 직접 이 데이터를 파싱하든 라이브러리를 쓰든 해서 결과값을 지도서비스에 이쁘게 그려냅니다. 아마도 DBMS 에 따라 <span style="background-color: #ffffff; color: #161616; text-align: start;">Heading 이 여러개로 분화될것 같은데 그건 개발자간의 긴밀한 커뮤니케이션으로 해결되리라 믿습니다.</span></span><span style="background-color: #ffffff; color: #000000; text-align: start;"></span></p>
+<h4 data-ke-size="size20"><span style="color: #000000;"><span style="background-color: #ffffff;">Geometry 의 좌표체계를 지도 서비스에 맞게 변형해서 주는&nbsp; 방식</span></span></h4>
+<p data-ke-size="size16"><span style="color: #000000;"><span style="background-color: #ffffff;">다음은 서버에서 좌표를 따서 정리해서 주는 겁니다. 카카오 지도를 예로 들자면 다음과 같은 형태로 정리해서 전달하는 것이죠</span></span></p>
+<pre id="code_1707468100432" class="java" data-ke-language="java" data-ke-type="codeblock"><code>[
+{"lat": 37.59212327805168, "lng": 126.96736607963692},
+{"lat": 37.59208098633907, "lng": 126.96755518953367},
+....
+]</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이렇게 서버에서 좌표를 떼어내서 전달해주면 클라언트 입장에서는 안그래도 신경쓸게 많은 지도 서비스를 조금 더 편하게 다룰 수 있겠죠. 그래서 저는 이 방식을 채택했습니다. 무엇보다도 자바, Spring 진영에서는 JPA ORM 과 jts 라는 공간정보 라이브러리가 호환이 잘 되기도 하구요.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h3 data-ke-size="size23">JPA, jts 를 이용한 공간정보 좌표 뿌리기</h3>
+<p data-ke-size="size16">이제는 제가 어떤 라이브러리로, 어떤 코드로 저런 결과물을 클라이언트에 제공하는지 공유하고자합니다. 그냥 간단히 생각하면 숫자만 파싱해서 끝내면 되는거 아니냐! 하실 수 있지만 그렇게 할 경우 몇가지 함정에 걸리기 때문에 안전하게 라이브러리를 사용하사길 권장합니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">제가 다루는 필지, 행정동, 법정동은 닫혀있는 공간정보(Polygon) 이기 때문에 <b>Polygon 을 다루는 코드</b>입니다. 그 외에 네비게이션에 길을 표시하는 등의 공간정보 처리는 LineString 계열일 것입니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20">코드 구상</h4>
+<p data-ke-size="size16">약간의 리서치를 통해 Polygon 은 3가지 타입으로 정리가 될 수 있음을 파악했습니다.</p>
+<p data-ke-size="size16">1. 그냥 Polygon</p>
+<p data-ke-size="size16">2. 내부에 구멍이 있는, Polygon</p>
+<p data-ke-size="size16">3. 다수의 polygon 집합</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">여기서 비교적 처리가 까다로운 케이스는 내부에 구멍이 있는 Polygon 입니다. 마치 도넛이나 도로를 사이에 둔 넓은 필지 모양처럼요. 지도 서비스에 따라서 내부에 구멍이 있는 Polygon 을 다루는 방법이 다르겠지만, 이 글의 기준이 되는 카카오 지도 서비스의 경우에는 Polygon 이 중첩되는 부분은 공백이 되도록 반응하는 특성이 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이러한 특성을 이용해서 Polygon 외곽선 (Exteriror) 다음에 Polygon 내부선 (Inteiror) 을 넘겨주는 것으로 내부 구멍이 있는 Polygon 을 표현하는 문제를 해결할 수 있습니다. 그리고 이 Polygon 외곽선과 <span style="color: #333333; text-align: start;">Polygon 내부선은 모두 LineString 으로 이루어져있기(적어도 jts에서는) 때문에 하나의 Polygon 은 LineString 혹은 <span style="color: #333333; text-align: start;">Collection Of<span> LineString</span></span> 으로 표현될 수 있습니다. 이러한 LineString 을 Exterior, Interior 순서에 맞게 Collection 으로 만드는 것으로 Multi Polygon 은 물론이고 내부 구멍이 있는 Polygon 도 커버할 수 있게 되겠죠.</span></p>
+<p><figure class="imageblock alignCenter" width="750" height="376" >
+    <span data-lightbox="lightbox">
+        <img src="./img/Geometry 분해.png" width="750" height="376"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<h4 data-ke-size="size20">실제 코드</h4>
+<p data-ke-size="size16">이 샘플 코드는 <b>SpringBoot 3.2.2 버전과, PostgreSQL 15 버전</b>을 기준으로 작성되었습니다.</p>
+<pre id="code_1707468793018" class="java" data-ke-language="java" data-ke-type="codeblock"><code>dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.postgresql:postgresql'
+	implementation 'org.hibernate:hibernate-spatial:6.2.2.Final'
+	implementation group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1' // 'org.hibernate:hibernate-spatial:6.2.2.Final' 를 적용하면 이게 필요해짐
+	implementation 'org.postgis:postgis-jdbc:1.3.3'
+
+
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">아래는 이 의존성을 바탕으로 제거 정의한 공간정보 Entity 입니다. 다른 정보는 최대한 빼고 필지 정보와 공간정보만 있는 담백한 엔티티에요. 좌표체계는 우리에게 익숙한 4326을 사용했습니다.</p>
+<pre id="code_1707469043312" class="java" data-ke-language="java" data-ke-type="codeblock"><code>import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.locationtech.jts.geom.Geometry;
+
+@Entity
+@Table(name = "spatial_sample")
+@NoArgsConstructor
+@Getter
+public class SpatialSample {
+
+    @Id
+    private String pnu;
+    @Column(name = "geom", columnDefinition = "geometry(Geometry, 4326)")
+    private Geometry geom;
+
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">아래는 좌표를 lng, lat 형태로 담는 객체입니다. 객체 이름에서 좌표체계를 알 수 있도록 4326을 명시했습니다.</p>
+<p data-ke-size="size16">이 객체를 생성하는 방법은 오로지 of 라는 팩토리 메서드만으로 하도록 만들었습니다.&nbsp;</p>
+<p data-ke-size="size16">이후에 나오겠지만 jts Geometry 에서 가져오는 좌표 자체가 double 로 Boxed 타입이 아니어서 이 객체의 필드값 역시 dobule 로 지정하였습니다.</p>
+<pre id="code_1707469488236" class="java" data-ke-language="java" data-ke-type="codeblock"><code>import lombok.Data;
+
+/**
+ * 위 구상도에서 좌표객체의 역할
+ * 좌표체계 4326 (WSG84) 기반의 좌표값들
+ */
+@Data
+public class Coordinate4326 {
+    private double lng;
+    private double lat;
+
+    private Coordinate4326() {}
+
+    public static Coordinate4326 of(double lng, double lat) {
+        Coordinate4326 coordinate4326 = new Coordinate4326();
+        coordinate4326.lat = lat;
+        coordinate4326.lng = lng;
+        return coordinate4326;
+    }
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이상의 Entity 와 좌표객체를 이용하여 아래처럼 Wrapper 를 만들어냅니다.</p>
+<p data-ke-size="size16">기본 생성자는 private 으로 만들고 오로지 public 팩토리 메서드 하나를 통해서 객체를 생성하도록 디자인하여 약속되지 않은 제3의 방법을 통해 이 객체가 생성되는 가능성을 차단합니다.&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">팩토리 메서드를 통해 Geometry 정보를 주입받고 이후에는 이 Geometry 가 Polygon 인지, MultiPolygon 인지 구분하여 별도의 private 메서드를 적용하여 정보를 완성합니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<pre id="code_1707470959902" class="java" data-ke-language="java" data-ke-type="codeblock"><code>import lombok.Getter;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Polygon;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+
+@Getter
+public class CoordinateWrapper {
+
+    private String lat;
+    private String lng;
+
+    private List&lt;List&lt;Coordinate4326&gt;&gt; coordinates = new ArrayList&lt;&gt;();
+
+    /**
+     * fromGeometry 팩토리 메서드를 통해서만 이 객체가 생성되도록 기본 생성자를 private 으로 처리합니다.
+     */
+    private CoordinateWrapper(){}
+
+    /**
+     * @param geometry CoordinateWrapper 객체는 org.locationtech.jts.geom.Geometry 의 정보를 통해 생성됩니다.
+     * @return geometry 의 좌표값에 따라 coordinates 와 중심좌표(lat, lng) 가 채워진 wrapper 를 반환합니다. geometry 가 null 일 경우 좌표값이 비어있는 wrapper 를 반환합니다.
+     */
+    public static CoordinateWrapper fromGeometry(Geometry geometry) {
+        if (geometry == null) {
+            return new CoordinateWrapper();
+        }
+
+        CoordinateWrapper geometryCoordinateWrapper;
+        if (geometry instanceof MultiPolygon multiPolygon) {
+            geometryCoordinateWrapper = fromMultiPolygon(multiPolygon);
+        } else if (geometry instanceof Polygon polygon) {
+            geometryCoordinateWrapper = fromPolygon(polygon);
+        } else {
+            geometryCoordinateWrapper = notAPolygon(geometry);
+        }
+        geometryCoordinateWrapper.setCentroidCoordinateBy(geometry);
+
+        return geometryCoordinateWrapper;
+    }
+
+    private static CoordinateWrapper fromMultiPolygon(MultiPolygon multiPolygon) {
+        CoordinateWrapper geometryCoordinateWrapper = new CoordinateWrapper();
+        geometryCoordinateWrapper.coordinates = new ArrayList&lt;&gt;();
+
+        for (int i = 0; i &lt; multiPolygon.getNumGeometries(); i++) {
+            Polygon polygon = (Polygon) multiPolygon.getGeometryN(i);
+            geometryCoordinateWrapper.coordinates.addAll(getMultiObjectListForm(polygon));
+        }
+
+        return geometryCoordinateWrapper;
+    }
+
+    private static CoordinateWrapper fromPolygon(Polygon polygon) {
+        CoordinateWrapper geometryCoordinateWrapper = new CoordinateWrapper();
+
+        if (polygon != null) {
+            geometryCoordinateWrapper.coordinates = getMultiObjectListForm(polygon);
+            return geometryCoordinateWrapper;
+        }
+        return geometryCoordinateWrapper;
+    }
+
+    private static CoordinateWrapper notAPolygon(Geometry geometry) {
+        CoordinateWrapper geometryCoordinateWrapper = new CoordinateWrapper();
+
+        List&lt;List&lt;Coordinate4326&gt;&gt; result = new ArrayList&lt;&gt;();
+        result.add(Arrays
+                .stream(geometry.getCoordinates())
+                .map(e -&gt; Coordinate4326.of(e.x, e.y))
+                .toList()
+        );
+
+        geometryCoordinateWrapper.coordinates = result;
+        return geometryCoordinateWrapper;
+    }
+
+    private static List&lt;List&lt;Coordinate4326&gt;&gt; getMultiObjectListForm(Polygon polygon) {
+        if (polygon == null) {
+            return new ArrayList&lt;&gt;();
+        }
+
+        // Interior 로 구성하기
+        List&lt;List&lt;Coordinate4326&gt;&gt; result = IntStream.range(0, polygon.getNumInteriorRing())
+                .mapToObj(i -&gt; polygon.getInteriorRingN(i).getCoordinates())
+                .map(coords -&gt; Arrays.stream(coords)
+                        .map(coord -&gt; Coordinate4326.of(coord.x, coord.y))
+                        .collect(Collectors.toList())
+                )
+                .collect(Collectors.toList());
+
+        // exterior 넣기
+        result.add(1,
+                Arrays.stream(polygon.getExteriorRing().getCoordinates()).map(e -&gt; Coordinate4326.of(e.x, e.y)).toList());
+
+        return result;
+    }
+
+    private void setCentroidCoordinateBy(Geometry geometry) {
+        Point centroid = geometry.getCentroid();
+        lng = String.valueOf(centroid.getX());
+        lat = String.valueOf(centroid.getY());
+    }
+
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">백엔드로서 Geometry 를 클라이언트에게 전달해야하는데 그 방법을 고민중인 사람이 있다면 이 글이 도움이 되었길 바라면서 이 글을 마칩니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #PostgreSQL #JPA #카카오맵 #Geometry 좌표 #JPA Geometry #JPA jts #JPA Spatial 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

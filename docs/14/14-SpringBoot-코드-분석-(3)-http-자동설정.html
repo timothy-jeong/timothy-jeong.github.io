@@ -1,0 +1,351 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>SpringBoot 코드 분석 (3) http 자동설정</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">SpringBoot 코드 분석 (3) http 자동설정</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/SpringBoot 파헤치기</p>
+                                    <p class="date">2024-10-10 19:07:20</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="360" height="302" >
+    <span data-lightbox="lightbox">
+        <img src="./img/20220607_001840_0001--1-.png" width="360" height="302"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">대략적인 Spring 의 자동설정 개념까지 파악했다. 이제 본격적으로&nbsp; spring-boot-autoconfigure:http 의 코드를 살펴보자</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">http 디렉터리는 다음의 java 클래스로 구성되어 있다.</p>
+<pre id="code_1728550182718" class="java" data-ke-language="java" data-ke-type="codeblock"><code>├── codec
+│&nbsp;&nbsp; ├── CodecsAutoConfiguration.java
+│&nbsp;&nbsp; └── package-info.java
+├── GsonHttpMessageConvertersConfiguration.java
+├── HttpMessageConverters.java
+├── HttpMessageConvertersAutoConfiguration.java
+├── JacksonHttpMessageConvertersConfiguration.java
+├── JsonbHttpMessageConvertersConfiguration.java
+└── package-info.java</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">결코 많은 양이 아니고, HttpMessageConverter, JacksonHttpMessageConverter 등 익숙한 이름이 보여서 자신감이 생긴다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이 글에서는 다음의 내용을 정리한다.</p>
+<ol style="list-style-type: decimal;" data-ke-list-type="decimal">
+<li>이 자동설정의 핵심이 되는 HttpMessageConvertersAutoConfiguration 를 분석하고</li>
+<li>이렇게 설정되는 HttpMessageConverter 에 대한 분석</li>
+<li>그리고 실제 SpringBoot 에서의 동작을 확인한다.</li>
+</ol>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26">HttpMessageConvertersAutoConfiguration</h2>
+<p data-ke-size="size16">Spring MVC 를 공부한 사람이라면 HttpMessageConverter 가 Dispatcher Servlet 에서 HandlerMapping 과 HanderAdopter 에서 객체의 직렬화, 역직렬화에 관여한다는 감은 있을 것이다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이제는 그설정이 어떻게 구현되어 있는지 확인해보자</p>
+<div style="background-color: #2b2b2b; color: #a9b7c6;">
+<pre class="java" data-ke-language="java"><code>@AutoConfiguration(after = {
+       GsonAutoConfiguration.class, JacksonAutoConfiguration.class, JsonbAutoConfiguration.class
+})
+@ConditionalOnClass(HttpMessageConverter.class)
+@Conditional(NotReactiveWebApplicationCondition.class)
+@Import({
+       JacksonHttpMessageConvertersConfiguration.class,
+       GsonHttpMessageConvertersConfiguration.class,
+       JsonbHttpMessageConvertersConfiguration.class
+})
+@ImportRuntimeHints(HttpMessageConvertersAutoConfigurationRuntimeHints.class)
+public class HttpMessageConvertersAutoConfiguration {
+
+    static final String PREFERRED_MAPPER_PROPERTY = "spring.mvc.converters.preferred-json-mapper";
+
+    @Bean
+    @ConditionalOnMissingBean
+    public HttpMessageConverters messageConverters(ObjectProvider&lt;HttpMessageConverter&lt;?&gt;&gt; converters) {
+       return new HttpMessageConverters(converters.orderedStream().toList());
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(StringHttpMessageConverter.class)
+    protected static class StringHttpMessageConverterConfiguration {
+
+       @Bean
+       @ConditionalOnMissingBean
+       public StringHttpMessageConverter stringHttpMessageConverter(Environment environment) {
+          Encoding encoding = Binder.get(environment).bindOrCreate("server.servlet.encoding", Encoding.class);
+          StringHttpMessageConverter converter = new StringHttpMessageConverter(encoding.getCharset());
+          converter.setWriteAcceptCharset(false);
+          return converter;
+       }
+    }
+
+    static class NotReactiveWebApplicationCondition extends NoneNestedConditions {
+       NotReactiveWebApplicationCondition() {
+          super(ConfigurationPhase.PARSE_CONFIGURATION);
+       }
+       @ConditionalOnWebApplication(type = Type.REACTIVE)
+       private static final class ReactiveWebApplication {}
+    }
+
+    static class HttpMessageConvertersAutoConfigurationRuntimeHints extends BindableRuntimeHintsRegistrar {
+       HttpMessageConvertersAutoConfigurationRuntimeHints() {
+          super(Encoding.class);
+       }
+    }
+}</code></pre>
+</div>
+<p data-ke-size="size16">&nbsp;</p>
+<h3 data-ke-size="size23">어노테이션</h3>
+<p data-ke-size="size16">다음의 세 어노테이션이 뜻하는 바는 다음과 같다.&nbsp;</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">- @AutoConfiguration: Gson, Jackson, Jsonb 의 자동 설정이 완료된 이후에 이 자동설정이 적용된다.</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">- @ConditionalOnClass(HttpMessageConverter.class) : HttpMessaegConverter 가 class path 에 있을 때에만 적용된다.</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">- @Conditional(NotReactiveWebApplicationCondition.class) : Spring Webflux 의 Reactive Web 이 없을 때만 적용된다.</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">&nbsp;</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">즉, SpringWeb 설정이 되어있을 때에만 HttpMessageConvertConfiguration 이 적용되며, 만약 Reactor 기반 으로 웹서버를 만들려고 한다면 <span style="color: #000000; text-align: start;">HttpMessageConvertConfiguration 는 적용되지 않는다.</span></p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16">&nbsp;</p>
+<p style="color: #000000; text-align: start;" data-ke-size="size16"><span style="color: #000000; text-align: start;">다른 어노테이션은 쉽게 해석이 되지만 @Import 가 의미하는 바는 조금 다르다.</span></p>
+<h4 data-ke-size="size20">@Import</h4>
+<p data-ke-size="size16">@Import 어노테이션은 보통 @Configuration 으로 명시된 컴포넌트를 주입할때 사용할 수 있다.</p>
+<pre id="code_1728558207962" class="java" data-ke-language="java" data-ke-type="codeblock"><code>@Import({
+       JacksonHttpMessageConvertersConfiguration.class,
+       GsonHttpMessageConvertersConfiguration.class,
+       JsonbHttpMessageConvertersConfiguration.class
+})</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그렇다면 여기서 @Import 가 사용된 이유는 뭘까? Import 하고 있는 각가의 Configuration 들을 살펴보자</p>
+<div style="background-color: #2b2b2b; color: #a9b7c6;">
+<pre class="java" data-ke-language="java"><code>@Configuration(proxyBeanMethods = false)
+class JacksonHttpMessageConvertersConfiguration { ... }
+
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass(Gson.class)
+class GsonHttpMessageConvertersConfiguration { ... }
+
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass(Jsonb.class)
+class JsonbHttpMessageConvertersConfiguration { ... }</code></pre>
+</div>
+<p data-ke-size="size16">&nbsp;</p>
+<div style="background-color: #f0f0f0; padding: 16px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); border-radius: 8px;">
+<p data-ke-size="size18"><b><span style="color: #333333; text-align: start;">자동 설정의 '모듈화를 통한 관리의 용이성'</span></b></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><b>이들은 자동구성 대상이 아니다.</b></p>
+<p data-ke-size="size16">이들 클래스 자체가 `@Configuration`으로 어노테이션 되어 있어, Spring 애플리케이션 컨텍스트에 의해 관리될 것이라고 예상할 수 있다. 하지만, 이 클래스들은 `@AutoConfiguration`이 아니기 때문에 자동 구성(Auto-Configuration)의 대상이 아니고 따라서, 자동 설정 대상으로 만들어 주기 위해 별도로 관리할 필요할 것이다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><b>동일한 관심사에 대한 '조건부 설정' 이 필요하다.</b><br />각각의 클래스들은 동일한 관심사(예: codec)에 대한 설정을 다루고 있으며, 조건 (`@ConditionalOnClass`, `@ConditionalOnBean` 등)로 적용될 필요가 있다. 그렇지 않다면 상호 충돌이 일어나서 별도의 관리가 필요할 것이다. 그렇다면 이들을 각각 독립된 `@AutoConfiguration`으로 만들기보다는, 관련된 설정들을 하나의 모듈로 묶어 관리하면 더 효율적일 것이다. 이러한 설정 모듈을 하나로 통합하여 관리하면, 관련 설정을 그룹화하고 일관되게 제어할 수 있게된다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><b>결론</b></p>
+<p data-ke-size="size16">따라서 이들 설정을 하나의 `@Configuration` 모듈로 만들고, 그 모듈을 `@Import`를 통해 포함시킨 후, 이를 관리하는 `@AutoConfiguration` 클래스를 작성하는 방식이 더 유리하다. 이렇게 하면, 관련 설정을 하나의 자동 구성 클래스로 묶어서 조건부로 관리할 수 있으며, 설정의 일관성을 유지하고 유지보수를 용이하게 할 수 있다.<br /><br />이러한 이유로, 각 `Configuration` 모듈을 `@Import`를 통해 포함시킨 것으로 보인다. 이를 통해 관련 설정을 한 곳에서 관리하고, 자동 구성의 일부로 통합할 수 있게 되었다.</p>
+</div>
+<p data-ke-size="size16">&nbsp;</p>
+<h3 data-ke-size="size23">필드</h3>
+<p data-ke-size="size16">한가지 눈에 띄는 필드값이 있는데 바로 이것이다.</p>
+<div style="background-color: #2b2b2b; color: #a9b7c6;">
+<pre class="java" data-ke-language="java"><code>static final String PREFERRED_MAPPER_PROPERTY = "spring.mvc.converters.preferred-json-mapper";</code></pre>
+</div>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이 필드값은 디폴트 접근자로 되어있어서 같은 패키지에서만 접근할 수 있는 값인데, @Import 되어있는 클래스들</p>
+<p data-ke-size="size16">- JacksonHttpMessageConvertersConfiguration</p>
+<p data-ke-size="size16">- GsonHttpMessageConvertersConfiguration</p>
+<p data-ke-size="size16">- JsonbHttpMessageConvertersConfiguration</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">에서 프로퍼티 key = spring.mvc.converters.preferred-json-mapper, value = {jackson, gson, jsonb} 일때 @Bean 을 주입하는 설정을 찾을 수 있다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">조금만 더 딥하게 들어가보자</p>
+<h4 data-ke-size="size20">1. JacksonHttpMessageConvertersConfiguration</h4>
+<p data-ke-size="size16">다음의 설정을 보면 <b>Jackson 을 기본 json mapper 로 이용</b>한다는 것을 알 수 있다.</p>
+<div style="background-color: #2b2b2b; color: #a9b7c6;">
+<pre class="java" data-ke-language="java"><code>@Configuration(proxyBeanMethods = false)
+class JacksonHttpMessageConvertersConfiguration {
+
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnClass(ObjectMapper.class)
+	@ConditionalOnBean(ObjectMapper.class)
+	@ConditionalOnProperty(
+			name = HttpMessageConvertersAutoConfiguration.PREFERRED_MAPPER_PROPERTY,
+			havingValue = "jackson", matchIfMissing = true
+	)
+	static class MappingJackson2HttpMessageConverterConfiguration {
+
+		@Bean
+		@ConditionalOnMissingBean(
+				value = MappingJackson2HttpMessageConverter.class,
+				ignoredType = {...})
+		MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter(
+				ObjectMapper objectMapper
+		) {
+			return new MappingJackson2HttpMessageConverter(objectMapper);
+		}
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnClass(XmlMapper.class)
+	@ConditionalOnBean(Jackson2ObjectMapperBuilder.class)
+	protected static class MappingJackson2XmlHttpMessageConverterConfiguration {
+
+		@Bean
+		@ConditionalOnMissingBean
+		public MappingJackson2XmlHttpMessageConverter mappingJackson2XmlHttpMessageConverter(
+				Jackson2ObjectMapperBuilder builder
+		) {
+			return new MappingJackson2XmlHttpMessageConverter(builder.createXmlMapper(true).build());
+		}
+	}</code></pre>
+</div>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><span style="color: #333333; text-align: start;">JacksonHttpMessageConvertersConfiguration 은 PREFERRED_MAPPER_PROPERTY, 즉 applcation.property 의<span>&nbsp;</span></span>"spring.mvc.converters.preferred-json-mapper" 가 없거나, jackson 으로 설정되어 있을때&nbsp; MappingJackson2HttpMessageConverter 를&nbsp; Bean 에 등록하도록 동작한다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20">2. GsonHttpMessageConvertersConfiguration</h4>
+<div style="background-color: #2b2b2b; color: #a9b7c6;">
+<pre class="java" data-ke-language="java"><code>@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass(Gson.class)
+class GsonHttpMessageConvertersConfiguration {
+
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnBean(Gson.class)
+    @Conditional(PreferGsonOrJacksonAndJsonbUnavailableCondition.class)
+    static class GsonHttpMessageConverterConfiguration {
+
+       @Bean
+       @ConditionalOnMissingBean
+       GsonHttpMessageConverter gsonHttpMessageConverter(Gson gson) {
+          GsonHttpMessageConverter converter = new GsonHttpMessageConverter();
+          converter.setGson(gson);
+          return converter;
+       }
+    }
+
+    private static class PreferGsonOrJacksonAndJsonbUnavailableCondition extends AnyNestedCondition {
+
+       PreferGsonOrJacksonAndJsonbUnavailableCondition() {
+          super(ConfigurationPhase.REGISTER_BEAN);
+       }
+
+       @ConditionalOnProperty(name = HttpMessageConvertersAutoConfiguration.PREFERRED_MAPPER_PROPERTY,
+             havingValue = "gson")
+       static class GsonPreferred {}
+
+       @Conditional(JacksonAndJsonbUnavailableCondition.class)
+       static class JacksonJsonbUnavailable {}
+    }
+
+    private static class JacksonAndJsonbUnavailableCondition extends NoneNestedConditions {
+
+       JacksonAndJsonbUnavailableCondition() {
+          super(ConfigurationPhase.REGISTER_BEAN);
+       }
+
+       @ConditionalOnBean(MappingJackson2HttpMessageConverter.class)
+       static class JacksonAvailable {}
+
+       @ConditionalOnProperty(name = HttpMessageConvertersAutoConfiguration.PREFERRED_MAPPER_PROPERTY,
+             havingValue = "jsonb")
+       static class JsonbPreferred {}
+    }
+}</code></pre>
+</div>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">기본적으로 클래스 경로(calss path) 에 Gson.class 가 있어야 하며 이후에는 조금 복잡한 조건이 있다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size18"><b>조건1 .JacksonAndJsonbUnavailableCondition</b></p>
+<p data-ke-size="size16">JacksonAndJsonbUnavailableCondition 는 NoneNestedConditions 를 확장하고 있어서 다음의 두 경우를 모두 충족해야한다.</p>
+<p data-ke-size="size16">- MappingJackson2HttpMessageConverter 이 Bean 에 등록되어 있지 않다.</p>
+<p data-ke-size="size16">- spring.mvc.converters.preferred-json-mappe=jsonb 로 설정이 되어 있지 않다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size18"><b>조건 2. PreferGsonOrJacksonAndJsonbUnavailableCondition</b></p>
+<p data-ke-size="size16">PreferGsonOrJacksonAndJsonbUnavailableCondition 는 AnyNestedCondition 을 확장하고 있어서 포함된 조건중 하나만 충족해도 된다.</p>
+<p data-ke-size="size16">- JacksonAndJsonbUnavailableCondition 이 조건을 충족하거나</p>
+<p data-ke-size="size16">- spring.mvc.converters.preferred-json-mappe=gson 으로 설정이 되어 있다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">Jackson 이 json mapper 로 등록되는&nbsp; 조건과 함께 생각해보면 spring.mvc.converters.preferred-json-mappe=gson 로 설정하는게 핵심이다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">JsonbHttpMessageConvertersConfiguration 의 설정역시 Gson 과 비슷하므로 생략한다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h3 data-ke-size="size23">HttpMessageConverter &amp; HttpMessageConverters</h3>
+<p data-ke-size="size16">위의 과정을 통해 json 을 위한 HttpMessageConverter 가 어떻게 등록되는지 감이 잡혔다.</p>
+<p data-ke-size="size16">그렇다면 이러한 과정을 통해 등록한 HttpMessageConverter 는 무엇이고 어떻게 관리되는 걸까?</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20">HttpMessageConverter</h4>
+<p data-ke-size="size16">HttpMessageCorvter 는 Http 메시지는 Response 혹은 Request 로 변환해주는 역할을 하는 인터페이스이다. 이 인터페이스를 구현, 상속한 클래스들이 상당히 많기 떄문에 이를 모두 분석할 순 없을 것 같다. 대신 SpringBoot 의 기본 Json Mapper 로 지정되어있는 <u><b>Jacksonㅇ의 구현만 분석 하겠다.</b></u></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">MappingJackson2HttpMessageConvert 를 살펴보면 아래와 같은 구조로 이루어져 있다.</p>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="./img/스크린샷 2024-10-12 오전 10.21.16.png"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20">HttpMessageConverters</h4>
+<p data-ke-size="size16">&nbsp;</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26">SpringBootApplication 에서 확인해보기</h2>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이상 공부한 내용을 SpringBootApplication 에서 확인해보자</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">HttpMessageConverterChecker 라는 Compoenent 를 만든다.&nbsp;</p>
+<div style="background-color: #2b2b2b; color: #a9b7c6;">
+<pre class="java" data-ke-language="java"><code>import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
+import org.springframework.context.ApplicationContext;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.stereotype.Component;
+
+
+@Component
+public class HttpMessageConverterChecker {
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @PostConstruct
+    public void check() {
+        HttpMessageConverters converters = applicationContext.getBean("messageConverters", HttpMessageConverters.class);
+
+        System.out.println("======== just Converter ========");
+        for (HttpMessageConverter&lt;?&gt; converter : converters.getConverters()) {
+            System.out.printf("'%s' is being registered in the HttpMessageConverters.%n", converter.getClass().getName());
+            System.out.println("    " + converter.getSupportedMediaTypes());
+        }
+
+        System.out.println("======== json messageConverters ========");
+        for (HttpMessageConverter&lt;?&gt; converter : converters.getConverters()) {
+
+            String name = converter.getClass().getName();
+            if (name.contains("json")) {
+                System.out.printf("'%s' is being registered in the JSON mapper.%n", converter.getClass().getName());
+                System.out.println("    " + converter.getSupportedMediaTypes());
+            }
+        }
+    }
+}</code></pre>
+</div>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

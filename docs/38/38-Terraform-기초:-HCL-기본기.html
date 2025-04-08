@@ -1,0 +1,93 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>Terraform 기초: HCL 기본기</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">Terraform 기초: HCL 기본기</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/Terraform</p>
+                                    <p class="date">2024-11-17 23:26:37</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="350" height="350" >
+    <span data-lightbox="lightbox">
+        <img src="./img/DALL&middot;E 2024-11-18 00.12.42 - A thumbnail image for a blog post explaining the basic structure of Terraform HCL (HashiCorp Configuration Language). The image should feature a clean.webp" width="350" height="350"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">아무리 HCL 이 쉬운 DSL 이라곤 하지만 정확히 쓰고 읽기 위해서는 최소한의 공부가 필요하다. 우선 Terraform 을 설치하는게 우선이다.</p>
+<h3 data-ke-size="size23">1. Terraform 설치 (업그레이드)</h3>
+<p data-ke-size="size16">가장 좋은 방법은 <a href="https://developer.hashicorp.com/terraform/install">공식 사이트의 설치 가이드</a>를 보고 설치하는 것이다.</p>
+<p data-ke-size="size16">나는 mac 을 이용하고 brew 를 통해 설치, 삭제, 업그레이드를 관리하는 것이 용이하므로 brew 로 설치했었다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그 결과 버전 1.8.2 가 설치되어 있는 것을 확인할 수 있었다.</p>
+<pre class="vala"><code>$&gt; brew list terraform
+# /opt/homebrew/Cellar/terraform/1.8.2/bin/terraform
+
+$&gt; terraform version
+# Terraform v1.8.2
+# on darwin_arm64</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">24년 11월 17일 기준 terraform 최신 버전은 1.9.8 이므로 업그레이드가 필요했다. 이럴때 brew 가 빛을 발한다.</p>
+<pre class="routeros"><code>$&gt; brew update
+# ==&gt; Updating Homebrew...
+
+$&gt; brew upgrade terraform
+# ==&gt; Upgrading 1 outdated package:
+# hashicorp/tap/terraform 1.8.2 -&gt; 1.9.8</code></pre>
+<hr data-ke-style="style1" />
+<h3 data-ke-size="size23">2. HCL 문법</h3>
+<p data-ke-size="size16">공식문서에 따르면 Terraform 을 이용하기 위해 모든 HCL 문법을 디테일하게 알 필요는 없다고 한다. (그럼에도 궁금하다면 <a href="https://github.com/hashicorp/hcl/blob/main/hclsyntax/spec.md">HCL Spec</a> 을 확인하자) 그리고 HCL 이 아닌 <a href="https://developer.hashicorp.com/terraform/language/syntax/json">JSON 형태</a>로도 동일한 기능을 수행하게 할 수 있는데, 개발자가 직접 다루기보다는 프로그래밍적으로 다룰때 유용한 형태이다.</p>
+<h4 data-ke-size="size20"><b>2.1 블록 (block)</b></h4>
+<p data-ke-size="size16">HCL 언어는 주로 <b>블록(block)</b>과 <b>인수(argument)</b>로 구성된다.</p>
+<p data-ke-size="size16">블록은 특정 리소스나 설정을 정의하는 기본 단위이다. 각 블록은 블록 유형, 라벨, 그리고 본문으로 구성된다. 예를 들어, AWS의 EC2 인스턴스를 정의하는 블록은 다음과 같다:</p>
+<pre class="nginx"><code>resource "aws_instance" "example" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">여기서 <code>resource</code>는 블록 유형을, <code>aws_instance</code>와 <code>example</code>은 각각 리소스 유형과 로컬 이름을 나타낸다. 블록 본문에는 해당 리소스의 속성을 정의하는 인수들이 포함된다.</p>
+<h4 data-ke-size="size20"><b>2.2 인수(argument)</b></h4>
+<p data-ke-size="size16">인수는 위의 예제에서 속성에 값을 할당하는 데 사용된다. <code>ami</code> 와 <code>instnace_type</code> 이 인수이며, 각각의 등호(<code>=</code>) 를 통해 할당된다. 인수의 값은 리터럴 값, 변수, 또는 표현식으로 지정할 수 있다.</p>
+<h4 data-ke-size="size20"><b>2.3 표현식 (expression)</b></h4>
+<p data-ke-size="size16">인수의 값에 표현식을 지정한다는 것의 예시는 다음과 같다.</p>
+<pre class="nginx"><code>resource "aws_subnet" "example" {
+  vpc_id = aws_vpc.example.id
+  cidr_block = "10.0.1.0/24"
+}</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">여기서 <code>vpc_id</code> 에 <code>aws_vpc.example.id</code> 를 이용하여 다른 리소스의 id 를 참조하도록 하고 있는 형태가 표현식을 인수의 값으로 지정한 것이다.</p>
+<h4 data-ke-size="size20"><b>2.4 주석 (Comment)</b></h4>
+<p data-ke-size="size16">Terraform 구성 파일에서 주석은 <code>#</code> 또는 <code>//</code>로 시작하는 한 줄 주석과, <code>/* */</code>로 감싸는 여러 줄 주석이 있다.</p>
+<hr data-ke-style="style1" />
+<h3 data-ke-size="size23"><b>3. 파일 구조</b></h3>
+<p data-ke-size="size16">Terraform 구성은 .tf 확장자를 가진 파일로 작성되며, 하나의 디렉토리에 여러 파일이 있을 경우 Terraform은 이를 모두 읽어들여 하나의 구성으로 처리한다. 따라서 관련된 리소스나 모듈을 논리적으로 분리하여 파일을 구성하는 것이 좋다.</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #Terraform #HCL #terraform hcl 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

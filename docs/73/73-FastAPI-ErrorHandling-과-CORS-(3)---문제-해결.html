@@ -1,0 +1,78 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>FastAPI ErrorHandling 과 CORS (3) - 문제 해결</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">FastAPI ErrorHandling 과 CORS (3) - 문제 해결</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/FastAPI CORS</p>
+                                    <p class="date">2025-02-22 17:08:57</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16"><b><a href="https://probehub.tistory.com/68" target="_blank" rel="noopener">FastAPI 에서 ErrorHandling 하는 과정에서 CORS 문제가 발생하는 이슈와 그 원인</a></b>을 그리고 그에 따른 <b><a href="https://probehub.tistory.com/69" target="_blank" rel="noopener">사람들의 대응</a></b>을 알아봤습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그리고 저는 문제의 원인이 Starlette에 있다고 생각했고, 나름대로 연구하여 Starlette codebase 에 코드 3줄을 추가하여 이러한 문제를 해소할 수 있는 방법을 찾았습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">당장이라도 Starlette 에 PR 을 올리고 싶었지만, 의외로 다른 사람들의 더 나은 대안을 가지고 있거나 FastAPI 나 Starlette 에서 이미 관련 이슈를 해소할 계획일 있을지도 모르기 때문에 우선 discussion 을 이용하기로 했습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h3 data-ke-size="size23"><b>FastAPI Discussion</b></h3>
+<p data-ke-size="size16">[<a href="https://github.com/fastapi/fastapi/discussions/13398" target="_blank" rel="noopener">discussion link</a>]</p>
+<p data-ke-size="size16">이 문제가 FastAPI 에 문서화 될 계획이 있다면 당장 급한 이슈는 해소될 것으로 보여서 물어봤습니다.</p>
+<p data-ke-size="size16">일단 FastAPI 팀은 문서화 계획은 없으며, Starlette 에 관련 제안을 해달라는 답볃을 받았습니다.</p>
+<p><figure class="imageblock alignCenter" width="720" height="557" >
+    <span data-lightbox="lightbox">
+        <img src="./img/FastAPI Discussion.png" width="720" height="557"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h3 data-ke-size="size23"><b>Starlette Discussion</b></h3>
+<p data-ke-size="size16">[<a href="https://github.com/encode/starlette/discussions/2876" target="_blank" rel="noopener">discussion link</a>]</p>
+<p data-ke-size="size16">Starlette 에는 codebase 변경과 문서화를 함께 제안해보았습니다.</p>
+<p data-ke-size="size16">하지만 제가 문제가 있다고 생각했던 방식이 사실은 Starlette 의 공식적인 접근이라는 답변을 받았습니다. (FastAPI 의 maintainer 와 동일한 사람입니다.)</p>
+<p><figure class="imageblock alignCenter" width="720" height="259" >
+    <span data-lightbox="lightbox">
+        <img src="./img/스크린샷 2025-02-22 오후 11.13.21.png" width="720" height="259"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이미 Starlette 진영에서 해당 문제에 대한 공식적인 접근방법이 있다고 말을 한 이상 내가 코드베이스를 바꾸는것은 어려운일이라고 생각됩니다. 다만 Starlette 공식문서에 해당 내용을 추가할 순 있을 것 같습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h3 data-ke-size="size23"><b>문제해결:Starlette 문서추가</b></h3>
+<p data-ke-size="size16">결국 Starlette 공식문서에 해당 내용을 추가할 수 있었습니다. <a href="https://github.com/encode/starlette/commit/708930c4a3a62f9674cb08f3ed776039a5c5b8ce" target="_blank" rel="noopener">RP#2885</a>, 개발자로서 직접 소스코드에 기여하고 싶은 욕심이 있어서 <a href="https://www.starlette.io/middleware/#corsmiddleware-global-enforcement" target="_blank" rel="noopener">공식문서로</a>만 끝난게 아쉽지만, Starlette 과 FastAPI 생태계를 더 잘 알게된 계기가 된것 같습니다.</p>
+<p><figure class="imageblock alignCenter" width="705" height="629" >
+    <span data-lightbox="lightbox">
+        <img src="./img/starlette result.png" width="705" height="629"  />
+    </span>
+    <figcaption>공식문서에 추가된 내용</figcaption>
+</figure></p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #fastapi cors #fastapi starlette #starlette cors 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

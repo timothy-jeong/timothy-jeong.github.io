@@ -1,0 +1,178 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>MSA 주요 패턴: 사가(Saga) 패턴</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">MSA 주요 패턴: 사가(Saga) 패턴</h2>
+                                <div class="box-info">
+                                    <p class="category">기초 지식/MSA</p>
+                                    <p class="date">2024-11-20 20:59:37</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="350" height="350" >
+    <span data-lightbox="lightbox">
+        <img src="./img/MSA-saga-pattern.webp" width="350" height="350"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<h3 id="1.-Saga-패턴" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1" data-ke-size="size23"><b>1. Saga 패턴</b><span><span data-vc="icon-undefined"></span></span></h3>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="13" data-ke-size="size16">모놀로식 아키텍처에서 단일 DB 를 사용하고 있다면 트랜잭션의 원자성과 일관성을 DBMS 수준에서 보장을 해준다. 따라서 데이터의 일관성을 유지하는게 어렵지 않다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="106" data-ke-size="size16">하지만 MSA 에서 여러 서비스의 서로 다른 DBMS 를 거쳐 영속화 해야하는 것은 흔한 일이다. 때문에 데이터 일관성 문제가 발생한다. 이러한 문제를 해결하기 위해 <b>&ldquo;서로다른 DBMS 의 트랜잭션을 논리적으로 묶을 필요&rdquo;</b>가 있었고 이를 위해 등장한 설계 패턴이 Saga 패턴이다. (마치 트랜잭션이 전파되는 것이 이야기가 전파되는것과 같다고 하여 Saga 라고 부른다)</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="106" data-ke-size="size16">&nbsp;</p>
+<p><figure class="imageblock alignCenter" width="605" height="331" >
+    <span data-lightbox="lightbox">
+        <img src="./img/사가패턴-논리적 트랜잭션.png" width="605" height="331"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="106" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="106" data-ke-size="size16">Saga 패턴에서 트랜잭션을 논리적으로 묶는 주체는 어플리케이션이다. 위와 같이 트랜잭션이 실패했을 때 <b>보상 트랜잭션(cancel)</b> 을 호출 어플리케이션에 <b>전달</b>하고 트랜잭션 롤백 등 지정된 행위를 하게 만든다. 이 과정에서 일시적으로 데이터 정합이 깨져있을 수 있으나 <b>&ldquo;결과적 정합&rdquo;</b>을 보장한다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="106" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="106" data-ke-size="size16"><span style="background-color: #ffffff; color: #172b4d; text-align: start;">위 그림은 단순히 트랜잭션 신호 전달만 도식화했을 뿐이다. 실제로 트랜잭션 성공(TransactionComplete) 혹은 실패(Cancel) 은 메시지 브로커를 통한 이벤트로 전달된다.</span></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="106" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="435" data-ke-size="size16">이러한 saga 패턴은 코레오그래피 기반 사가(Choreography-based Saga)와 오케스트레이션 기반 사가(Orchestration-based Saga) 등이 있다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 id="1.1-코레오그래피-기반-사가(Choreography-based-Saga)" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="536" data-ke-size="size23"><b>2. 코레오그래피 기반 사가(Choreography-based Saga)</b><span><span data-vc="icon-undefined"></span></span></h3>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="579" data-ke-size="size16">코레오그래피 기반 사가는 아래의 그림과 같이 각 서비스간 메시지 브로커로 <b>직접 결합된 형태</b>이다.</p>
+<p><figure class="imageblock alignCenter" width="650" height="385" >
+    <span data-lightbox="lightbox">
+        <img src="./img/사가패턴-코레오그래피.png" width="650" height="385"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="994" data-ke-size="size16">서비스와 서비스를 메시지 브로커가 직접 중계하기 때문에 구현이 쉽다. 하지만,</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="681" data-ke-size="size16">트랜잭션 Saga 참가자가 많을 수록 트랜잭션 흐름이 복잡해지고 마이크로 <b>서비스간 순환 종속이 발생</b>할 수 있다. 또한 서비스가 발행, 소비 주체를 알고 있다고 가정하고 메시지를 설계한다면 <b>서비스간 결합도가 높아진다</b>는 부작용이 있다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 id="1.2--오케스트레이션-기반-사가(Orchestration-based-Saga)" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="812" data-ke-size="size23"><b>3. 오케스트레이션 기반 사가(Orchestration-based Saga)</b><span><span data-vc="icon-undefined"></span></span></h3>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="681" data-ke-size="size16"><span style="background-color: #ffffff; color: #172b4d; text-align: start;">오케스트레이션 기반 사가는 중앙 집중된 Saga Orchestration 이 saga 참여자들에게 어떤 로컬 트랜잭션에 참여해야 하는지 알려주는 형태이다. </span><br /><br /></p>
+<p><figure class="imageblock alignCenter" width="650" height="393" >
+    <span data-lightbox="lightbox">
+        <img src="./img/사가패턴-오케스트레이션.png" width="650" height="393"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">트랜잭션 흐름이 명확해지고 서비스간 결합도를 낮출 수 있다는 장점이 있지만,</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="994" data-ke-size="size16">오케스트레이터(Orchestrator) 가 실패했을 때 모든 트랜잭션 연계가 끊길 수 있다는 SPOF 문제가 있으며 서비스간 결합도는 낮아지지만 서비스와 오케스트레이터간 결합도가 높아진다는 단점있다. 이러한 이유로 유연성과 확장성이 낮아질 수 이다는 위험이 있다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 id="1.3-Correlation-ID" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1143" data-ke-size="size23">4. 보장되지 않은 영속화 순서, CorrelationID</h3>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #172b4d; text-align: start;">아래와 같은 DB 를 가지고 있고 BFF 로 MSA 를 호출하는 환경을 생각해보자</span></p>
+<p><figure class="imageblock alignCenter" width="650" height="303" >
+    <span data-lightbox="lightbox">
+        <img src="./img/edited_BFF 예시 ERD.png" width="650" height="303"  />
+    </span>
+    <figcaption></figcaption>
+</figure><figure class="imageblock alignCenter" width="650" height="366" >
+    <span data-lightbox="lightbox">
+        <img src="./img/edited_BFF 모델.png" width="650" height="366"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #172b4d; text-align: start;">BFF 는 </span><b>A,B,C 를 생성</b><span style="background-color: #ffffff; color: #172b4d; text-align: start;">할 수 있는 요청을 모두 받았고 이들을 각기 분리하여 A 서비스, B 서비스, C 서비스로 전달하였다. 이때 A, B, C 의 ERD 는 다음과 같다.</span></p>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #172b4d; text-align: start;">BFF 는 각 서비스의 순서를 모르게(결합도가 낮은) 설계 되었기 때문에 동시에 A, B, C 서비스를 호출하였고, 각각의 A, B, C 의 영속화 순서는 보장되지 않았다. 그 결과 <span style="background-color: #ffffff; color: #172b4d; text-align: start;"><b>C &rarr; B &rarr; A 순서로 영속화</b>가 되었다. <b><span style="background-color: #ffffff; color: #172b4d; text-align: start;">B 는 A의 id 를 알아야하고 C는 B 의 id 를 알아야 하지만 B 와 C 는 fk 가 누락된 상황이다.</span></b></span></span></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><span style="background-color: #ffffff; color: #172b4d; text-align: start;">각 서비스는 본인들의 영속화 업무가 끝나자 TransactionComplete 이벤트를 발행한다. 그 순서는 아래와 같다.</span></p>
+<p><figure class="imageblock alignCenter" width="650" height="405" >
+    <span data-lightbox="lightbox">
+        <img src="./img/Saga Event Sequence.png" width="650" height="405"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">발생 이벤트의 payload 에는 생성된 엔티티의 id 만 담겨있다고 생각하면 B 는 A 가 생성되었다는 이벤트를 구독하여 확인했지만 <b>도대체 이 A 를 어떤 B 와 연관시켜야 할지 알 지 못하며 C 역시 마찬가지다.</b></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1694" data-ke-size="size16">어떻게 해야할까? BFF 가 모든 paylaod 를 A 에게 넘기고 A는 영속화후 남는 payload 로 B 를 만들고, 다시 같은 작업을 B 는 C에 대해 반복해야할까? 이렇게 설계된다면 서비스간 결합도가 굉장히 높은 상태이므로 좋은 설계라고 볼 수 없다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1694" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1840" data-ke-size="size16">이때 등장하는게 <b>correlationID</b>란 개념이다. BFF 에서(혹은 API Gateway 에서) <b>각 요청을 고유하게 구분할 수 있는id 를 생성</b>하여 각 서비스의 생성 요청에 함께 보내는 것이다. 그리고 각 서비스는 이벤트를 발행할때 생성된 엔티티의 id 와 이 유니크한 id 를 함께 payload 에 넣고 발행한다면 상호 결합도는 낮추면서 DB 의존 관계를 명확하게 유지할 수 있게 된다.&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1840" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1840" data-ke-size="size16">이러한 <b>correlationID </b>를 적용하여 위의 이벤트 발행에 payload 를 붙여서 보여주면 다음과 같다.</p>
+<p><figure class="imageblock alignCenter" width="650" height="405" >
+    <span data-lightbox="lightbox">
+        <img src="./img/Saga Event Sequence-v2.png" width="650" height="405"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1840" data-ke-size="size16">&nbsp;</p>
+<h3 style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1840" data-ke-size="size23"><b>5. 보장되지 않은 영속화 순서 ,&nbsp; 아직 메시지를 받아들일 준비가 안됨...</b></h3>
+<p data-ke-size="size16">이번엔 반대로 영속화 순서가 A -&gt; B -&gt; C 순서라고 생각해보자. 그리고 이런 경우에는 A 가 TransactionComplete이벤트를 발행해도 B 는 이 메시지를 구독하고도 처리할 준비가 되지 않았을 것이다. 이것은 C역시 마찬가지다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">주로 한국에서 많이 사용하는 kafka 에서 어떻게 처리할지 알아보겠다.</p>
+<h4 data-ke-size="size20"><b>5.1 Kafka 에서 준비되지 않은 TransactionComplte 메시지 처리</b></h4>
+<p data-ke-size="size16">이벤트를 소비했으나 연관관계를 매핑해줄 엔티티가 아직 없는 경우</p>
+<p data-ke-size="size16">- Kafka 는 메시지의 오프셋을 고의로 커밋하지 않는 것으로 메시지를 유지할 수 있다. 그리고 N 초 뒤에 다시 메시지를 소비한다.</p>
+<p data-ke-size="size16">- 이벤트를 Dead Letter Queue 에 저장하고, 엔티티 B 가 영속화 되었을때 재처리하도록 할 수 있다.</p>
+<p data-ke-size="size16">- Fallback Storage 를 이용하여 TransactionComplete 이벤트를 임시 저장소(Redis, DB) 에 저장한 뒤 B 가 영속화된 뒤 재처리한다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">Python 코드로 보면 이렇다.</p>
+<pre id="code_1732104685805" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from kafka import KafkaConsumer, KafkaProducer
+import json
+import time
+
+consumer = KafkaConsumer(
+    'transaction-events',
+    group_id='service_b',
+    bootstrap_servers='localhost:9092',
+    enable_auto_commit=False,  # 오프셋 자동 커밋 비활성화
+    value_deserializer=lambda v: json.loads(v.decode('utf-8'))
+)
+
+# 임시 저장소 (Redis나 DB로 대체 가능)
+temp_storage = {}
+
+def handle_event(event):
+    correlation_id = event['correlation_id']
+    a_id = event['a_id']
+
+    # B 엔티티가 아직 없는 경우
+    b_entity = find_b_entity_by_correlation_id(correlation_id)
+    if not b_entity:
+        print(f"B entity not found for Correlation ID {correlation_id}. Retrying...")
+        temp_storage[correlation_id] = event  # 이벤트를 임시 저장
+        time.sleep(5)  # 대기 후 재처리
+        return False
+
+    # B 엔티티 업데이트
+    b_entity.a_id = a_id
+    save_b_entity(b_entity)
+    print(f"Updated B entity with A ID {a_id}")
+    return True
+
+for message in consumer:
+    event = message.value
+    success = handle_event(event)
+
+    # 성공적으로 처리된 경우만 오프셋 커밋
+    if success:
+        consumer.commit()</code></pre>
+<h4 style="color: #000000; text-align: start;" data-ke-size="size20">&nbsp;</h4>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #MSA #msa saga pattern #msa 사가 패턴 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

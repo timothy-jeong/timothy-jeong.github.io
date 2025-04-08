@@ -1,0 +1,89 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>MSA 주요 패턴: 서비스 디스커버리(Service Discovery) 패턴</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">MSA 주요 패턴: 서비스 디스커버리(Service Discovery) 패턴</h2>
+                                <div class="box-info">
+                                    <p class="category">기초 지식/MSA</p>
+                                    <p class="date">2024-11-20 20:45:30</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="350" height="350" >
+    <span data-lightbox="lightbox">
+        <img src="./img/MSA-ServiceDiscovery.webp" width="350" height="350"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<h3 id="1.-서비스-디스커버리-패턴" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1" data-ke-size="size23"><b>1. 서비스 디스커버리 패턴</b><span><span data-vc="icon-undefined"></span></span></h3>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="18" data-ke-size="size16">MSA 에서는 언제든 새로운 원격 서버 인스턴스(pod) 가 추가되거나 제거될 수 있으므로 그 개수와 물리적 주소가 고정되어 있지 않기 때문에 클라이언트가 물리적인 위치를 몰라도 서비스를 호출할 수 있도록 하는 것이 중요하다.<br /><b>즉 &ldquo;물리적인 주소&rdquo;가 아니라 &ldquo;논리적인 주소&rdquo; 로 서버 인스턴스를 찾을수 있어야 한다.</b></p>
+<h4 id="1.1-클라이언트-사이드-서비스-디스커버리" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="196" data-ke-size="size20"><b>1.1 클라이언트 사이드 서비스 디스커버리</b><span><span data-vc="icon-undefined"></span></span></h4>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="221" data-ke-size="size16">클라이언트 사이드 서비스 디스커버리의 구성은 아래와 같다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="221" data-ke-size="size16">&nbsp;</p>
+<p><figure class="imageblock alignCenter" width="650" height="321" >
+    <span data-lightbox="lightbox">
+        <img src="./img/클라이언트 사이드 디스커버리.png" width="650" height="321"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="221" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="221" data-ke-size="size16">마이크로 서비스의 인스턴스들(pod)의 물리적인 주소를 Service Registry 라는 곳에 저장한다. 이때 인스턴들은 주기적으로 Hearthbeat 를 Service Registry 로 전송하여 Service Registry가 인스턴스 상태를 체크할 수 있도록 한다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="412" data-ke-size="size16">클라이언트는 직접 Service Registry 에 접근하여 주소 목록을 조회하고, 그 주소중 한 곳으로 요청을 전송한다. 이때 클라이언트에서 직접 로드밸런서를 구현하여 적절히 트래픽이 분산될 수 있도록 한다.</p>
+<h4 id="클라이언트-사이드-서비스-디스커버리의-장애-대응" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="531" data-ke-size="size20">클라이언트 사이드 서비스 디스커버리의 장애 대응<span><span data-vc="icon-undefined"></span></span></h4>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="559" data-ke-size="size16"><b>[Service Registry 장애 대응]</b></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="585" data-ke-size="size16">어떠한 이유에서 Service Registry 가 다운된 상황에서 클라이언트가 주소를 요청하는 경우에 문제가 발생할 수 있다. 이러한 이유로 클라이언트는 Service Registry 가 반환한 주소 목록을 일정 기간동안 캐시를 해두는 전략을 사용하여 장애 대응 시간을 벌 수 있다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="585" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="745" data-ke-size="size16"><b>[Instance 장애 대응]</b></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="763" data-ke-size="size16">Service Registry 가 반환한 주소 목록을 캐싱해뒀을 때 Service Registry 에서는 장애가 있는 Instance 라고 판단하여 주소 목록에서 제외했으나 클라이언트가 계속 요청을 보내는 경우가 있을 수 있다. 이런 경우에 기존 캐시에서 해당 Instance 주소를 삭제하고 다른 주소에 요청을 보내는 등의 로직이 클라이언트에서 적절히 구현되어야 한다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h4 id="1.2-서버-사이드-서비스-디스커버리" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="972" data-ke-size="size20"><b>1.2 서버 사이드 서비스 디스커버리</b><span><span data-vc="icon-undefined"></span></span></h4>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="994" data-ke-size="size16">클라이언트 사이드 서비스 디스커버리의 구성은 아래와 같다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="994" data-ke-size="size16">&nbsp;</p>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="./img/서버 사이드 디스커버리.png"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="994" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="994" data-ke-size="size16">마이크로 서비스의 인스턴스들(pod)의 물리적인 주소를 Service Registry 라는 곳에 저장한다. 이때 인스턴들은 주기적으로 Hearthbeat 를 Service Registry 로 전송하여 Service Registry가 인스턴스 상태를 체크할 수 있도록 한다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1185" data-ke-size="size16">클라이언트는 서버에서 구현된 로드밸랜서 주소로 요청을 보내고, 로드밸런서는 클라이언트 요청에 적절한 인스턴스 주소를 찾아서 요청을 처리한다.</p>
+<h4 id="서버-사이드-서비스-디스커버리-장애-대응" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1265" data-ke-size="size20">서버 사이드 서비스 디스커버리 장애 대응<span><span data-vc="icon-undefined"></span></span></h4>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1289" data-ke-size="size16"><b>[Service Registry 장애 대응]</b></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1315" data-ke-size="size16">어떠한 이유에서 Service Registry 가 다운된 상황에서 LB가 주소를 요청하는 경우에 문제가 발생할 수 있다. 이러한 이유로 LB는 Service Registry 가 반환한 주소 목록을 일정 기간동안 캐시를 해두는 전략을 사용하여 장애 대응 시간을 벌 수 있다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1315" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1469" data-ke-size="size16"><b>[Instance 장애 대응]</b></p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1487" data-ke-size="size16">Service Registry 가 반환한 주소 목록을 캐싱해뒀을 때 Service Registry 에서는 장애가 있는 Instance 라고 판단하여 주소 목록에서 제외했으나 LB가 계속 요청을 보내는 경우가 있을 수 있다. 이런 경우에 기존 캐시에서 해당 Instance 주소를 삭제하고 다른 주소에 요청을 보내는 등의 로직이 LB에 적절히 구현되어야 한다.</p>
+<h2 id="1.3-K8s-에서-Service-Discovery" style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1689" data-ke-size="size26"><b>1.3 K8s 에서 Service Discovery</b><span><span data-vc="icon-undefined"></span></span></h2>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1719" data-ke-size="size16">K8s 에서 Service 란 Service Object 를 말하는 개념이다. <a href="https://homes-dev-team.atlassian.net/wiki/spaces/HD/pages/15630378/MSA+Kubernetes+Container+Orchestration#4.2-%EB%84%A4%ED%8A%B8%EC%9B%8C%ED%81%AC%EC%97%90-%EA%B4%80%ED%95%9C-object-%EB%93%A4">K8s 네트워크 Object</a> 에서 언급한것과 같이 Service Object는 클러스터에서 실행중인 pod 에 접근할 수 있는 방법을 정의한 것이다. 따라서 클라이언트 코드는 가변적인 pod 의 물리 주소 대신 Service Object 를 통해 더 안정적인 네트워크 엔드포인트를 제공 받는다.</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1719" data-ke-size="size16">&nbsp;</p>
+<p style="background-color: #ffffff; color: #172b4d; text-align: start;" data-renderer-start-pos="1929" data-ke-size="size16">이러한 사실에 기반하여 K8s 의 Service Object 자체가 서비스 디스커버리 패턴을 구현한 구현체라고 생각할 수 있겠다. 이때 Service Discovery 의 역할은 K8s 마스터를 구성하는 요소 중 etcd 와 Controller Manager 와 API Server 를 통해 구현되었다.</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #MSA #서비스 디스커버리 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

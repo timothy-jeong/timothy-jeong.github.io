@@ -1,0 +1,94 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>Terraform 소개</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">Terraform 소개</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/Terraform</p>
+                                    <p class="date">2024-11-17 23:24:09</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <h3 data-ke-size="size23">1. <b>Terraform</b><b></b></h3>
+<h4 data-ke-size="size20"><b>1.1 Terraform 이란?</b></h4>
+<p data-ke-size="size16">Terraform은 HashiCorp에서 개발한 무료 오픈소스 IAC 도구이다. <a href="https://probehub.tistory.com/36">IAC 개요 및 주요 도구</a>에서 다룬 것과 같이 주로 <b>인프라 프로비저닝</b>에 사용되는 툴로써, 설치 파일은 단일 바이너리로 구성돼 있어서 빠르게 설정할 수 있다.</p>
+<p data-ke-size="size16">Terraform의 가장 큰 장점 중 하나는 여러 플랫폼(프라이빗 클라우드와 퍼블릭 클라우드)을 아우르는 인프라 배포가 가능하다는 거이다. 예를 들어, 온프레미스 vSphere 클러스터부터 AWS, GCP, Azure 같은 클라우드 솔루션까지 지원한다.</p>
+<h4 data-ke-size="size20"><b>1.2 Terraform 과 HashiCorp</b></h4>
+<p data-ke-size="size16">HashiCorp 는 클라우드 인프라를 효율적으로 관리하고 자동화하기 위한 다양한 도구를 개발하는 회사이다. HashiCorp의 제품은 DevOps, 클라우드, 그리고 인프라 관리에 초점을 맞추고 있으며 Terrafrom 도 그들의 제품 중 하나이다.</p>
+<hr data-ke-style="style1" />
+<h3 data-ke-size="size23">2. <b>Terraform의 핵심: Providers</b></h3>
+<p><figure class="imageblock alignCenter" width="650" height="204" >
+    <span data-lightbox="lightbox">
+        <img src="./img/assets.webp" width="650" height="204"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">Terraform이 이렇게 다양한 플랫폼을 지원할 수 있는 이유는 <b>Provider</b> 덕분이다.</p>
+<p data-ke-size="size16">Provider 는 HashiCorp 와 Terraform Community 에 의해 작성, 유지되며 외부 플랫폼을 API 형태로 생성, 관리 할 수 있도록 도와주는 역할을 한다. 대표적으로 다음과 같은 Provider 들이 있다:</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>클라우드 플랫폼</b>: AWS, GCP, Azure</li>
+<li><b>네트워크 인프라</b>: CloudFlare, DNS, Palo Alto Networks</li>
+<li><b>모니터링 및 데이터 관리 도구</b>: DataDog, Grafana, Sumo Logic</li>
+<li><b>데이터베이스</b>: MySQL, PostgreSQL, MongoDB</li>
+<li><b>버전 관리 시스템</b>: GitHub, GitLab, Bitbucket</li>
+</ul>
+<p data-ke-size="size16">이 외에도 <a href="https://registry.terraform.io/" target="_blank" rel="noopener">Terraform Registry</a> 에서 수천개 이상의 Provider 를 찾을 수 있다.</p>
+<hr data-ke-style="style1" />
+<h3 data-ke-size="size23">3. <b>Terraform의 언어: HCL</b></h3>
+<p data-ke-size="size16">Terraform은 HashiCorp Configuration Language(HCL)라는 선언적 언어를 사용한다.<br />이 언어를 이용하면 <code>.tf 확장자</code>를 가진 구성 파일에 인프라 리소스를 코드로 정의 한다.</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>HCL 은 코드 작성과 읽기가 쉬워서 초보자도 금방 배울 수 있다는 장점이 있다.</li>
+<li>선언형 코드로 현재 상태에서 <b>원하는 상태(Desired State)</b>로 인프라를 관리할 수 있다.<br />예를 들어, AWS에 EC2 인스턴스를 프로비저닝하는 코드를 작성하면, Terraform이 알아서 필요한 작업을 진행해서 현재 상태를 원하는 상태로 맞춰준다.</li>
+</ul>
+<hr data-ke-style="style1" />
+<h3 data-ke-size="size23">4. <b>Terraform의 작업 단계</b></h3>
+<p data-ke-size="size16">Terraform은 세 가지 주요 단계를 거쳐 작업한다.</p>
+<p><figure class="imageblock alignCenter" width="650" height="565" >
+    <span data-lightbox="lightbox">
+        <img src="./img/terraform-3step.webp" width="650" height="565"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<ol style="list-style-type: decimal;" data-ke-list-type="decimal">
+<li><b>Write</b>: 프로젝트에 사용될 Provider 와 리소스를 정의하고&nbsp;원하는 상태를 작성한다.</li>
+<li><b>Plan</b>: Terrafrom 은 해당 리소스의 현재 상태와 원하는 상태를 <b>비교</b>해서 실행 계획 작성한다.</li>
+<li><b>Apply</b>: 실행 계획대로 리소스를 생성, 수정, 삭제 등을 수행한다.</li>
+</ol>
+<p data-ke-size="size16">만약 환경이 원하는 상태에서 벗어나면, Terraform이 자동으로 수정해서 다시 맞춰준다. 덕분에 인프라는 항상 정의된 상태로 유지된다.</p>
+<hr data-ke-style="style1" />
+<h3 data-ke-size="size23">5. <b>Terraform의 상태(State)</b></h3>
+<p data-ke-size="size16">Terraform은 리소스의 상태를 기록해서 <b>'실시간'</b>으로 인프라 상태를 추적해.</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>State 파일</b>: 인프라의 설계도 같은 역할을 수행</li>
+<li><b>데이터 소스</b>: 기존 리소스의 속성을 읽어서 다른 리소스 설정에 활용할 수도 있음</li>
+<li><b>Import 기능</b>: 수동으로 생성된 리소스나 다른 IAC 도구로 만든 리소스를 가져와서 Terraform 관리 하에 둘 수 있음</li>
+</ul>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #Terraform #terrafrom 이란? 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

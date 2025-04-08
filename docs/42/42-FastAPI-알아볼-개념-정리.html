@@ -1,0 +1,120 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>FastAPI 알아볼 개념 정리</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">FastAPI 알아볼 개념 정리</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/FastAPI</p>
+                                    <p class="date">2024-11-19 13:16:14</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16">원래 SpringBoot &amp; Java 로 백엔드 어플리케이션을 개발하고 있었다. 그런데 최근 회사 테크 리드께서 FastAPI&amp;Python 그리고 Cloud Native로 대 변혁을 꽤하고 있는바...나는 조용히 새로운 기술 스택을 공부해서 잘 팔로업 하는게 소임을 다하는 것이라고 생각이 든다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그래서 FastAPI 를 어떻게 공부할까 고민하던중 기존에 이용하던 SpringBoot 의 개념과 대응되는(1:1 로 대응이 되진 않더라도...) 개념을 FastAPI 에서 찾아보면 좋겠다는 생각이 들었다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그러한 이유로 이 글에서는 SpringBoot 에서 주로 이용했던 기능을 FastAPI 에서는 어떻게 구현했는지 알아보는 세부 페이지에 대한 목차 정도가 될 것이다. 이 글은 즉&nbsp; 어떤 개념을 알아봐야하는지 구조화회는 기능을 수행한다고 보면 되겠다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<table style="border-collapse: collapse; width: 100%; height: 176px;" border="1" data-ke-align="alignLeft">
+<tbody>
+<tr style="height: 19px;">
+<td style="width: 50%; height: 19px; text-align: center;">SpringBoot 개념</td>
+<td style="width: 50%; height: 19px; text-align: center;">FastAPI 개념</td>
+</tr>
+<tr style="height: 19px;">
+<td style="width: 50%; height: 19px;">application.yml (환경변수 주입)</td>
+<td style="width: 50%; height: 19px;">&nbsp;</td>
+</tr>
+<tr style="height: 19px;">
+<td style="width: 50%; height: 19px;">DI (의존성 주입과 관리)</td>
+<td style="width: 50%; height: 19px;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">가장 잘 알려진 프로젝트 구조 (Controller, Service, Repository)</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 50%; height: 17px;">Filter &amp; Interceptor</td>
+<td style="width: 50%; height: 17px;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">HttpRequest 접근</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">path variable, query param, request body, multipart data</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 50%; height: 17px;">request validation</td>
+<td style="width: 50%; height: 17px;">&nbsp;</td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 50%; height: 17px;">advice controller (중앙집중형 예외 관리)</td>
+<td style="width: 50%; height: 17px;">&nbsp;</td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 50%; height: 17px;">JdbcTemplate (DB conenction, law query)</td>
+<td style="width: 50%; height: 17px;">&nbsp;</td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 50%; height: 17px;">ORM</td>
+<td style="width: 50%; height: 17px;">&nbsp;</td>
+</tr>
+<tr style="height: 17px;">
+<td style="width: 50%; height: 17px;">Transation Control (propagation, rollback 등)</td>
+<td style="width: 50%; height: 17px;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">Application Event (다른 쓰레드에서 비동기적 작업 수행)</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">AOP (비즈니스 로직과 관심사 분리)</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">Actuator (상태점검, 모니터링)</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">Thymeleaf (UI 템플릿)</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width: 50%;">Test (Integartion, Slice, Unit 테스트)</td>
+<td style="width: 50%;">&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,141 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>FastAPI & Postgres 로 multi-tenancy 구현하기</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">FastAPI & Postgres 로 multi-tenancy 구현하기</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/개발 탐구</p>
+                                    <p class="date">2025-02-17 08:26:51</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="650" height="650" >
+    <span data-lightbox="lightbox">
+        <img src="./img/fastapi-multi-tenant-race-condition.webp" width="650" height="650"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">stackoverflow 를 돌아다니다가 <b><a href="https://stackoverflow.com/questions/79435884/fastapi-middleware-for-postgres-multi-tenant-schema-switching-causes-race-condit/79443321#79443321" target="_blank" rel="noopener">"FastAPI multi-tenant 를 구현하는데 경쟁조건이 발생한다"</a></b> 는 내용의 질문을 발견했습니다. 회사에서 FastAPI 에서 PostgreSQL 의 schema 단위로 tenant 를 구분하여 DB 에 연결하는 기능을 구현했는데, 생각보다 여기서 어려움을 겪는 사람이 있는것 같아서 내용을 정리해봤습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>문제 분석</b></h2>
+<p data-ke-size="size16">우선 저는 질문자가 구현한 middleware 를 살펴봤습니다. 큰 흐름은 다음과 같습니다.</p>
+<ol style="list-style-type: decimal;" data-ke-list-type="decimal">
+<li><a href="https://docs.python.org/ko/3.13/library/contextvars.html" target="_blank" rel="noopener">ContextVar</a> 를 이용한다.</li>
+<li>Request 가 있을때마다 SessionLocal 에서 session 을 얻어온다.</li>
+<li><b>얻어온 session 에서 switch schema 를 실행하고 request.state 에 db 라는 이름으로 넘겨준다.</b></li>
+</ol>
+<p data-ke-size="size16">일단 주어진 코드로만 보면 왜 ContextVar 로 current_schema 정보를 저장하는지 의문이지만 <b>ContextVar 자체는 비동기 프렘워크에서 로컬 변수를 저장</b>하는데 사용되며, FastAPI 에서는 request 마다 격리되어 있기 때문에 경쟁조건을 만드는 원인이 아닐것으로 보았습니다. 그래서 주목할만한 특이한 사항은 <b>session 을 request.state 로 넘겨준다는 것</b>입니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">백엔드 어플리케이션에서는 DB와의 연결이 격리되는것이 중요합니다. 그러한 이유로 SpringBoot 도 Transaction 마다 Connection 을 따로 만들고, FastAPI도 공식문서에서 database session 에 대해서는 yield 와 Depends 사용을 권장하고 있지요. 특히 ASGI 를 염두에둔 FastAPI 에서는 DB Session 의 격리는 더 중요한 사항일 것입니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그렇다면 <b>middleware 수준에서 생성한 session 을 request.state 에 넘겨주는것이 DB Session 을 각 요청별로 격리</b>할 수 있을지 파악해보면 될것 같습니다.</p>
+<pre id="code_1739731010806" class="python" data-ke-language="python" data-ke-type="codeblock"><code># ...
+from typing import Optional, Callable
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+from app.db.session import SessionLocal, switch_schema
+from contextvars import ContextVar
+
+# Point1: ContextVar 를 이용한다.
+current_schema: ContextVar[str] = ContextVar("current_schema", default="public")
+
+class SchemaSwitchMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable) -&gt; Response:
+    	# Point2: 모든 요청마다 SessionLocal 에서 Session 을 얻어온다.
+        db = SessionLocal()  # Create a session here
+        try:
+            tenant_id: Optional[str] = request.headers.get("X-Tenant-ID")
+
+            if tenant_id:
+                # tenant_id 를 schem_name 으로 변환하는 로직
+                except Exception as e:
+                # exception 처리
+            else:
+                schema_name = "public"
+
+            current_schema.set(schema_name)
+            # Point3: middleware 수준에서 schema 를 변경하고 session을 request.state 에 넣는다.
+            switch_schema(db, schema_name)
+            request.state.db = db  # request state 에 session 저장
+
+            response = await call_next(request)
+            return response
+
+        except Exception as e:
+        	# Exception 처리
+        finally:
+            switch_schema(db, "public")
+            db.close()</code></pre>
+<h3 data-ke-size="size23"><b>문제의 원인</b></h3>
+<p data-ke-size="size16">이미 눈치챘겠지만, middleware 수준에서 생성한 session 을 request.state 에 넘겨주는것이 DB Session 을 각 요청별로 격리 할 수 있다는 <b>보장이 없습니다.</b> 특히 위에 구현된 middleware 의 경우에는 middleware 수준에서 commit 을 한번 하여 상태를 변화시키고 있기 때문에 더욱 문제가 됩니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">기본적으로 SQLAlchemy 를 이용해 Engine 을 만들고 SessionLocal 을 만들때 Connection Pool 을 이용하게 됩니다. 매 요청마다 pool 에서 session 을 얻어올 것이고, 기존 session이 제대로 관리되지 않는다면 이미 schema 변경이 일어난 session 에 대해서 다른 request 가 다시 schema 를 변경시킬 수 있는 가능성이 생깁니다. 명확하지 않지만 그럴 <b>여지</b>는 분명히 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">middleware 에서 만든 DB session 을 middleware 와 application 모든 곳에서 적절히 관리할 수 있다면 이러한 <b>여지</b>가 없겠지만 인간은 실수하기 나름입니다. Framework 수준에서 제공해주는 Depends 를 이용하는게 더 적절한 선택이 될 것입니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>해결방법</b></h2>
+<p data-ke-size="size16">아래와 같이 FastAPI의 Depends 안에서 Session 의 수명주기를 처리하면 큰 문제가 없을 것입니다:</p>
+<pre id="code_1739733083288" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from app.core.logger import logger
+from app.core.config import settings
+from typing import Annotated
+from fastapi import Header
+
+# Base for models
+Base = declarative_base()
+
+DATABASE_URL = settings.DATABASE_URL
+
+# SQLAlchemy engine
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=20,
+    max_overflow=30,
+)
+
+# Session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# TODO: use this get_db_session function in path operation.
+def get_db_session(tenant_id: Annotated[str, Header(alias="X-Tenant-ID")]) -&gt; Generator[Session, None, None]:
+    session = SessionLocal()
+    try:
+        # TODO: Implement tenant_id to tenant_schema here
+        session.execute(text(f"SET search_path TO {tenant_id};"))
+        session.commit()  # Ensure the schema change is applied immediately
+        yield session
+    finally:
+        session.close()</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #fastapi multi-tenant #fastapi mutitenant #fastapi db 경쟁조건 #fastapi postgresql tenant 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

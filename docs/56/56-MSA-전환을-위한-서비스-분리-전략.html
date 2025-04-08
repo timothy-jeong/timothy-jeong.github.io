@@ -1,0 +1,164 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>MSA 전환을 위한 서비스 분리 전략</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">MSA 전환을 위한 서비스 분리 전략</h2>
+                                <div class="box-info">
+                                    <p class="category">기초 지식/MSA</p>
+                                    <p class="date">2024-11-26 23:18:59</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16">회사에서 Monolith 로 개발해오던 프로젝트들을 MSA 로 옮겨간다고 한다. 내가 맡아서 개발해온 프로젝트의 도메인 지식은 내가 가장 잘 알고 있다보니 이 프로젝트 만큼은 내가 도메인 분리를 맡게 될 것 같다...그래서 공부중이다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style6" />
+<h3 data-ke-size="size23"><b>서비스 분리 전략 3가지 Key Point</b></h3>
+<ol style="list-style-type: decimal;" data-ke-list-type="decimal">
+<li>단계적으로 마이그레이션 한다.</li>
+<li>처음에는 크게 분리하고 추후 작게 분리한다.</li>
+<li>서비스 분리를 깔끔하게 나눠주는 마법같은 공식은 없다. (이 부분이 너무 슬펐다.)</li>
+</ol>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style6" />
+<h3 data-ke-size="size23"><b>서비스 분리 8가지 원칙</b></h3>
+<h4 data-ke-size="size20"><b>첫 번째 원칙: 작고 분리가 쉬운 서비스로 워밍업</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>간단한 서비스를 분리하며 역량을 내재화.</li>
+<li>신규 개발 기능이나 내부 의존성이 적고, 중요도가 낮은 기능부터 시작.</li>
+<li><b>Pilot 서비스 분리의 기준</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>내부 의존성이 낮은 기능(Core 의존성, 데이터 의존성 적음).</li>
+<li>장애 발생 시 시스템 전체에 영향이 적은 기능.</li>
+<li>Fallback 처리 가능한 기능.</li>
+<li>테이블 크기가 작고 데이터가 적은 기능.</li>
+</ul>
+</li>
+</ul>
+<hr data-ke-style="style1" />
+<h4 data-ke-size="size20"><b>두 번째 원칙: 핵심 기능의 분리 원칙</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>워밍업 이후 핵심 기능 분리를 고려.</li>
+<li><b>핵심 기능 분리의 어려움</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>결합도가 높고, 도메인 경계가 명확하지 않음.</li>
+</ul>
+</li>
+<li><b>핵심 기능 분리 전략</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>도메인 정의: 이벤트 스토밍으로 Sub-Domain 및 Bounded Context 발견.</li>
+<li>의존성 분석: 정적 분석 도구(Structure101, Stan4J 등) 활용.</li>
+<li>조직 기반 분리: 비즈니스 팀 구조와 일치하는 서비스 경계를 설정.</li>
+</ul>
+</li>
+</ul>
+<hr data-ke-style="style1" />
+<h4 data-ke-size="size20"><b>세 번째 원칙: 데이터 분리의 원칙</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>서비스 간 결합도를 최소화하기 위해 데이터베이스 분리가 필수.</li>
+<li><b>Anti-Pattern</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>서비스 간 공유 데이터베이스 사용.</li>
+</ul>
+</li>
+<li><b>데이터 분리 전략</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>저장소 및 데이터 마이그레이션 전략 수립.</li>
+<li>서비스별 독립적인 데이터 소유.</li>
+</ul>
+</li>
+</ul>
+<hr data-ke-style="style1" />
+<h4 data-ke-size="size20"><b>네 번째 원칙: 분리 대상 선정의 원칙</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>분리 대상 선정 질문</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>가장 문제가 되는 기능은 무엇인가?</li>
+<li>비즈니스 요구사항 변경이 잦은 기능은 무엇인가?</li>
+<li>잦은 코드 수정으로 배포를 유발하는 기능은 무엇인가?</li>
+<li>트래픽이 몰려 유연한 확장이 필요한 기능은 무엇인가?</li>
+</ul>
+</li>
+<li><b>분리 대상 선정 방법</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>코드 커밋 히스토리 분석.</li>
+<li>프로젝트 로드맵 기반으로 선정.</li>
+</ul>
+</li>
+</ul>
+<hr data-ke-style="style1" />
+<h4 data-ke-size="size20"><b>다섯 번째 원칙: 코드의 재사용 vs 재개발</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>기존 코드 재사용</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>기술 부채가 많아 비효율적일 가능성.</li>
+<li>오래된 기술 스택으로 Boilerplate Code가 많음.</li>
+</ul>
+</li>
+<li><b>재개발의 장점</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>도메인 요구사항 재정의 가능.</li>
+<li>기술 부채 해결 및 새로운 기술 스택 도입.</li>
+</ul>
+</li>
+</ul>
+<hr data-ke-style="style1" />
+<h4 data-ke-size="size20"><b>여섯 번째 원칙: 진화적인 서비스 분리</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>서비스 크기 결정의 원칙</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>Go Macro, then Micro: 먼저 크게 분리, 이후 필요에 따라 세분화.</li>
+<li>지나치게 작은 서비스는 인프라 복잡도 증가.</li>
+<li>Two Pizza Team, 독립 배포 가능성, 2주 내 재작성 가능 수준.</li>
+</ul>
+</li>
+</ul>
+<hr data-ke-style="style1" />
+<h4 data-ke-size="size20"><b>일곱 번째 원칙: 반복/점진적 분리</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li><b>Strangler Pattern</b>:
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>기존 시스템을 유지하며 새로운 기능을 마이크로서비스로 개발.</li>
+<li>점진적으로 Monolith를 대체.</li>
+</ul>
+</li>
+</ul>
+<hr data-ke-style="style1" />
+<h4 data-ke-size="size20"><b>여덟 번째 원칙: MSA와 신기술 도입</b></h4>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>MSA는 혁신과 실험을 가능하게 하지만, 초기 도입 시 신기술 적용은 신중해야 함.</li>
+<li>충분한 역량 내재화 후 점진적으로 신기술 도입.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style6" />
+<h3 data-ke-size="size23"><b>결론</b></h3>
+<p data-ke-size="size16">MSA 전환은 단순히 기술적인 변화가 아니라, 비즈니스와 기술을 통합적으로 고려해야 하는 전략적 과정입니다. 단계적이고 점진적인 접근, 도메인 중심 설계, 데이터 분리, 그리고 팀 구조와의 연계를 통해 성공적인 MSA 전환을 이룰 수 있다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style6" />
+<p data-ke-size="size16">참고자료: 샘 뉴먼의 Building MicroServices (책)</p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">참고자료: monolith into microservice (<a style="color: #0070d1;" href="https://martinfowler.com/articles/break-monolith-into-microservices.html">블로그</a>)</p>
+<p style="color: #333333; text-align: start;" data-ke-size="size16">참고자료: Straingler pattern (<a style="color: #0070d1;" href="https://akfpartners.com/growth-blog/strangler-pattern-dos-and-donts">블로그</a>)</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #오블완 #티스토리챌린지 #msa 분리 원칙 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

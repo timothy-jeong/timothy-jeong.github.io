@@ -1,0 +1,402 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>python 사용자 지정 불변 객체를 만드는 3가지 방법</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">python 사용자 지정 불변 객체를 만드는 3가지 방법</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/python</p>
+                                    <p class="date">2024-11-17 16:09:55</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="350" height="350" >
+    <span data-lightbox="lightbox">
+        <img src="./img/DALL&middot;E 2024-11-17 16.09.31 - An illustration symbolizing immutability in user-defined Python classes. Depict a sturdy, locked treasure chest with a glowing, immutable object (like.webp" width="350" height="350"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<h2 data-ke-size="size26">사용자 지정 불변 객체</h2>
+<p data-ke-size="size16"><a style="background-color: #e6f5ff; color: #0070d1;" href="https://probehub.tistory.com/34">이전 글</a>에서는 사용자가 만든 클래스는 모두 가변 객체인것 처럼 설명되었다. 정말 사용자가 만든 클래스는 불변 객체가 될 수 없는 걸까?</p>
+<p data-ke-size="size16">용자가 작성한 클래스를 불변 객체로 만들기 위해서는 다음의 조건이 충족되어야 할 것이다.</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>새로운 attribute 를 추가하는것을 막는다.</li>
+<li>기존 attribute 를 변경하는 것 모두가 막는다.</li>
+<li>값을 기반으로 객체간 동등성을 비교하도록 재정의 한다.</li>
+</ul>
+<hr contenteditable="false" data-ke-style="style2" data-ke-type="horizontalRule" />
+<h3 data-ke-size="size23">1. 새로운 attribute 추가 제한</h3>
+<p data-ke-size="size16">파이썬 객체는 별다른 설정을 하지 않는다면 attribute 를 dict 자료형에 저장한다. 그리고 dict 자료형은 값을 추가, 삭제할 수 있다. 아래의 예시를 보자.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">자유로은 attribute 추가</p>
+<pre id="code_1731826880008" class="python" data-ke-language="python" data-ke-type="codeblock"><code>class MutableClass:
+    value: str
+
+    def __init__(self, value: str):
+        self.value = value
+
+    def __repr__(self):
+        # __dict__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(f"{key}: {value}" for key, value in self.__dict__.items())
+        return f"MutableClass({attrs})"
+
+
+mutable = MutableClass("mutable")
+
+print(f"mutable: {mutable}")
+# mutable: MutableClass(value: mutable)
+
+mutable.value2 = "mutable..."
+
+print(f"mutable: {mutable}")
+# mutable: MutableClass(value: mutable, value2: mutable...)</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">MutableClass 내부에 정의된 __repr__ 메서드에서 명시적으로 __dict__ 에서 값을 가져오는 것을 알 수 있다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20">__slots__ 를 이용한 attribute 추가 제한</h4>
+<p data-ke-size="size16">클래스를 정의할때 __slots__ 를 통해 attribute&nbsp; 의 이름값을 정의한다면, 새로운 attribute 를 추가할때 AttributeError 가 발생하게 되며, 이는 IDE 에 따라서는 적절한 경고를 띄워준다.</p>
+<p data-ke-size="size16">__slots__ 를 이용하는 것은 객체의 사용방법을 제한하는 것 외에도 다른 장점이 있지만 이 글에서는 이 정도만 알아본다.</p>
+<pre id="code_1731827137507" class="python" data-ke-language="python" data-ke-type="codeblock"><code>class MutableClass:
+    value: str
+
+    def __init__(self, value: str):
+        self.value = value
+
+    def __repr__(self):
+        # __dict__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(f"{key}: {value}" for key, value in self.__dict__.items())
+        return f"MutableClass({attrs})"
+
+
+class ImmutableClass1:
+    __slots__ = ["value"]
+
+    def __init__(self, value: str):
+        self.value = value
+
+    def __repr__(self):
+        # __slots__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(
+            f"{slot}: {getattr(self, slot, None)}" for slot in self.__slots__
+        )
+        return f"ImmutableClass1({attrs})"
+
+
+mutable = MutableClass("mutable")
+immutable1 = ImmutableClass1("immutable1")
+
+print(f"mutable: {mutable}\nimmutable1: {immutable1}")
+# mutable: MutableClass(value: mutable)
+# immutable1: ImmutableClass1(value: immutable1)
+
+mutable.value2 = "mutable..."
+immutable1.value2 = "immutable1..." # AttributeError: 'ImmutableClass1' object has no attribute 'value2'</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">하지만 __slots__ 를 통해 새로운 attribute 를 추가하는 것을 막았다고 하더라도 이는 기존 attribute 의 불변성을 보장하는 것이 아니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">2. 기존 attribute 변경 제한</h3>
+<h4 data-ke-size="size20">2.1 __setattr__ 재정의</h4>
+<p data-ke-size="size16">파이썬 클래스는 내부적으로 attribute의 값을 초기화하거나 변경할때 __setattr__ 메서드를 호출하게 되어있다. 따라서 처음에 객체를 초기화할때를 제외하는 __setattr__ 을 호출하지 못하게 하면 attribute 를 변경하지 못하는 불변 객체가 완성되는 것이다.</p>
+<pre id="code_1731827999020" class="python" data-ke-language="python" data-ke-type="codeblock"><code>class ImmutableClass1:
+    __slots__ = ["value"]
+
+    def __init__(self, value: str):
+        self.value = value
+
+    def __repr__(self):
+        # __slots__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(
+            f"{slot}: {getattr(self, slot, None)}" for slot in self.__slots__
+        )
+        return f"ImmutableClass1({attrs})"
+
+
+class ImmutableClass2:
+    __slots__ = ["value"]
+
+    def __init__(self, value: str):
+        # 속성을 직접 설정 (이 단계에서는 __setattr__ 호출 방지)
+        super().__setattr__("value", value)
+
+    def __setattr__(self, key, value):
+        # 객체 초기화 후에는 속성 변경 금지
+        raise AttributeError(f"Cannot modify attribute '{key}'")
+
+    def __repr__(self):
+        # __slots__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(
+            f"{slot}: {getattr(self, slot, None)}" for slot in self.__slots__
+        )
+        return f"ImmutableClass2({attrs})"
+
+
+
+immutable1 = ImmutableClass1("immutable1")
+immutable2 = ImmutableClass2("immutable2")
+
+print(f"immutable1: {immutable1}\nimmutable2: {immutable2}")
+# immutable1: ImmutableClass1(value: immutable1)
+# immutable2: ImmutableClass2(value: immutable2)
+
+immutable1.value = "immutable1+1"
+immutable2.value = "immutable2+2" # AttributeError: Cannot modify attribute 'value'</code></pre>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">3. 두가지를 한번에</h3>
+<p data-ke-size="size16"><span style="color: #333333; text-align: start;">사실 위의 과정은 너무 복잡하고 boilerplate 가 많다. 사용자가 정의한 클래스를 불변 객체로 만들고자하는 욕구는 먼저 python 을 거쳐갔던 수많은 개발자들도 동일했을 것이므로 더 멋진 방법이 있을 것이라고 생각하는게 당연하다.<span>&nbsp;</span></span></p>
+<h4 data-ke-size="size20">3.1 dataclass</h4>
+<p data-ke-size="size16">그리고 그 방법 중 하나가 datablasses 이다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이 방법은 __slots__ 를 이용하지 않아도, __setattr__ 을 재정의 하지 않아도 기존에 기대하던 모든 것들을 충족시켜준다. IDE 에 따라서는 적절한 경고를 띄워준다.</p>
+<p data-ke-size="size16">(기본적으로 slot=False 로 설정되어 있는데, slot=True 로 설정하여 slots 을 사용하는 이점을 누릴 수 있다.)</p>
+<pre id="code_1731828310122" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from dataclasses import dataclass
+
+
+class ImmutableClass2:
+    __slots__ = ["value"]
+
+    def __init__(self, value: str):
+        # 속성을 직접 설정 (이 단계에서는 __setattr__ 호출 방지)
+        super().__setattr__("value", value)
+
+    def __setattr__(self, key, value):
+        # 객체 초기화 후에는 속성 변경 금지
+        raise AttributeError(f"Cannot modify attribute '{key}'")
+
+    def __repr__(self):
+        # __slots__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(
+            f"{slot}: {getattr(self, slot, None)}" for slot in self.__slots__
+        )
+        return f"ImmutableClass2({attrs})"
+
+
+@dataclass(frozen=True)
+class ImmutableClass3:
+    value: str
+
+    def __repr__(self):
+        # __dict__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(f"{key}: {value}" for key, value in self.__dict__.items())
+        return f"ImmutableClass3({attrs})"
+
+
+immutable2 = ImmutableClass2("immutable2")
+immutable3 = ImmutableClass3("immutable3")
+
+print(f"immutable2: {immutable2}\nimmutable3: {immutable3}")
+# immutable2: ImmutableClass2(value: immutable2)
+# immutable3: ImmutableClass3(value: immutable3)
+
+immutable3.value = "immutable3+3"  # dataclasses.FrozenInstanceError: cannot assign to field 'value'
+immutable3.value2 = "immutable3..." # dataclasses.FrozenInstanceError: cannot assign to field 'value2'</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20">3.2 NamedTuple</h4>
+<p data-ke-size="size16">NamedTuple 을 클래스가 상속하게 하는 방법도 있다. 이 방법 역시 새로운 attribute 의 추가와 기존 attribute 의 변경을 막는다. 이때는 기존 클래스의 __dict__ 나 __slots__ 를 이용하는 것이 아니라 tuple 구조로 바로 변경된다. tuple 자체가 불변 객체이므로 사용자가 정의한 객체에 불변성을 부여할 수 있다.</p>
+<p data-ke-size="size16">IDE 에 따라서는 <span style="background-color: #f6e199;">적절한 에러</span>를 띄워준다.</p>
+<pre id="code_1731828988871" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from dataclasses import dataclass
+from typing import NamedTuple
+
+
+@dataclass(frozen=True)
+class ImmutableClass3:
+    value: str
+
+    def __repr__(self):
+        # __dict__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(f"{key}: {value}" for key, value in self.__dict__.items())
+        return f"ImmutableClass3({attrs})"
+
+
+class ImmutableClass4(NamedTuple):
+    value: str
+
+    def __repr__(self):
+        # ._fields 를 통해 NamedTuple 필드에 접근
+        attrs = ", ".join(f"{field}: {getattr(self, field)}" for field in self._fields)
+        return f"ImmutableClass4({attrs})"
+
+
+immutable3 = ImmutableClass3("immutable3")
+immutable4 = ImmutableClass4("immutable4")
+
+print(f"immutable3: {immutable3}\nimmutable4: {immutable4}")
+# immutable3: ImmutableClass3(value: immutable3)
+# immutable4: ImmutableClass4(value: immutable4)
+
+immutable4.value = "immutable4+4"  # AttributeError: can't set attribute
+immutable4.value2 = "immutable4..."  # AttributeError: 'ImmutableClass4' object has no attribute 'value2'</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style2" />
+<h3 data-ke-size="size23">4. 동등성 비교 재정의</h3>
+<p data-ke-size="size16">불변 객체의 동등성은 값 비교로 이루어지는게 타당할 것이다.</p>
+<p data-ke-size="size16">따라서 위의 예제 중 ImmutableClass2 에 __eq__ 메서드를 재정의할 수 있을 것이고, dataclass 와 NamedTuple 은 모두 값을 기준으로 __eq__ 비교를 하도록 재정의 해준다.</p>
+<pre id="code_1731829654019" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from dataclasses import dataclass
+from typing import NamedTuple
+
+class ImmutableClass2:
+    __slots__ = ["value"]
+
+    def __init__(self, value: str):
+        # 속성을 직접 설정 (이 단계에서는 __setattr__ 호출 방지)
+        super().__setattr__("value", value)
+
+    def __setattr__(self, key, value):
+        # 객체 초기화 후에는 속성 변경 금지
+        raise AttributeError(f"Cannot modify attribute '{key}'")
+
+    def __repr__(self):
+        # __slots__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(
+            f"{slot}: {getattr(self, slot, None)}" for slot in self.__slots__
+        )
+        return f"ImmutableClass2({attrs})"
+
+    def __eq__(self, other):
+        # 동등성 비교: 다른 객체와 값 비교
+        if not isinstance(other, ImmutableClass2):
+            return False
+        return all(
+            getattr(self, slot, None) == getattr(other, slot, None)
+            for slot in self.__slots__
+        )
+
+@dataclass(frozen=True)
+class ImmutableClass3:
+    value: str
+
+    def __repr__(self):
+        # __dict__ 를 통해서 내부 attribute 에 접근
+        attrs = ", ".join(f"{key}: {value}" for key, value in self.__dict__.items())
+        return f"ImmutableClass3({attrs})"
+
+
+class ImmutableClass4(NamedTuple):
+    value: str
+
+    def __repr__(self):
+        # ._fields 를 통해 NamedTuple 필드에 접근
+        attrs = ", ".join(f"{field}: {getattr(self, field)}" for field in self._fields)
+        return f"ImmutableClass4({attrs})"
+
+
+immutable2_1 = ImmutableClass2("immutable2")
+immutable2_2 = ImmutableClass2("immutable2")
+
+immutable3_1 = ImmutableClass3("immutable3")
+immutable3_2 = ImmutableClass3("immutable3")
+
+immutable4_1 = ImmutableClass4("immutable4")
+immutable4_2 = ImmutableClass4("immutable4")
+
+print(f"""immutable2: {immutable2_1 == immutable2_2}
+immutable3: {immutable3_1 == immutable3_2}
+immutable4: {immutable4_1 == immutable4_2}
+""")</code></pre>
+<h3 data-ke-size="size23">5. 어떤걸 사용할까?</h3>
+<p data-ke-size="size16">그렇다면 지금까지 알아본 3가지 방법중 어떤것을 이용하는게 좋을까?</p>
+<ol style="list-style-type: decimal;" data-ke-list-type="decimal">
+<li>직접 재정의한 불변 객체</li>
+<li>dataclass 를 이용한 불변 객체</li>
+<li>NamedTuple 을 이용한 불변 객체</li>
+</ol>
+<h4 data-ke-size="size20">5.1 구현 복잡도</h4>
+<p data-ke-size="size16">직접 불변 객체를 재정의한 경우가 구현 복잡도가 가장 높았다. 그리고 dataclass 와 NamedTuple 의 경우 구현복잡도 에서 크게 차이가 있는것 같지는 않다, dataclass는 구현 복잡도가 아주 조금 더 높지만 그 덕분에 다양한 요구 사항에 따라 적절한 객체를 커스터마이징 하여 사용할 수 있다.</p>
+<h4 data-ke-size="size20">5.2 메모리 효율성</h4>
+<p data-ke-size="size16">구현 복잡성은 너무나 명확한 문제이고, 메모리 효율성을 따져보자</p>
+<pre id="code_1731830315097" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from dataclasses import dataclass
+from typing import NamedTuple
+import sys
+from pympler import asizeof
+
+
+class ImmutableClass2:
+    __slots__ = ["id", "value"]
+
+    def __init__(self, id: int, value: str):
+        super().__setattr__("id", id)
+        super().__setattr__("value", value)
+
+    def __setattr__(self, key, value):
+        raise AttributeError(f"Cannot modify attribute '{key}'")
+
+
+@dataclass(frozen=True, slots=True)
+class ImmutableClass3:
+    id: int
+    value: str
+
+
+class ImmutableClass4(NamedTuple):
+    id: int
+    value: str
+
+
+immutable2 = ImmutableClass2(10, "immutable")
+immutable3 = ImmutableClass3(10, "immutable")
+immutable4 = ImmutableClass4(10, "immutable")
+
+# 객체의 기본 메모리 크기만 측정
+print(f"self created size: {sys.getsizeof(immutable2)} bytes")
+print(f"dataclass size: {sys.getsizeof(immutable3)} bytes")
+print(f"NamedTuple size: {sys.getsizeof(immutable4)} bytes")
+# self created size: 48 bytes
+# dataclass size: 48 bytes
+# NamedTuple size: 56 bytes
+
+print(f"======================")
+
+# 객체와 객체가 참조하는 모든 메모리
+print(f"self created actual size: {asizeof.asizeof(immutable2)} bytes")
+print(f"dataclass actual size: {asizeof.asizeof(immutable3)} bytes")
+print(f"NamedTuple actual size: {asizeof.asizeof(immutable4)} bytes")
+# self created actual size: 136 bytes
+# dataclass actual size: 136 bytes
+# NamedTuple actual size: 144 bytes</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16"><span style="background-color: #f6e199;">NamedTuple 방식이 8 byte 정도 메모리를 더 소모</span>하는 것을 확인할 수 있다.</p>
+<p data-ke-size="size16">이는 NamedTuple 이 Tuple 의 기능에 더해&nbsp; "key" 값으로 "value" 를 조회할 수 있는 추가적인 기능을 갖는 자료구조를 구현함으로 추가 메모리 공간을 소모하는 것으로 추측된다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h4 data-ke-size="size20">5.3 결론</h4>
+<p data-ke-size="size16">지금까지 확인한 사실을 상대적 비교로 도표화하면 아래와 같다.</p>
+<p><figure class="imageblock alignCenter" width="500" height="466" >
+    <span data-lightbox="lightbox">
+        <img src="./img/스크린샷 2024-11-17 오후 5.15.16.png" width="500" height="466"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그렇다면 항상 dataclass 를 사용하는게 이득이 아닐까? 반드시 그런것은 아니다. <br /><br />dataclass 는 사용자에 따라서 설정 값이 달라질 수 있으므려 협업시 예상치 못한 행위를 일으키지 않기 위해 옵션을 확인해야하는 불편함이 있곗지만 NamedTuple 은 별다른 옵션이 없으므로 예상치 못한 행위가 발생될 가능성이 적다. 그리고 tuple 의 기능을 이용할 수 있다는 장점이 있다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">dataclass 를 이용하는 것은 직접 구현에 비해서 관련 클래스 메서드 오버라이딩 등 오버헤드가 있으므로 조금이지만 메모리 효율성에서 불리한 점이 있다. 따라서 엄청 대용량의 데이터를 객체로 매핑해서 다뤄야하는 경우에는 직접 구현하는 방법을 고려할 수 있겠다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #python namedtuple #python 불변 객체 #python dataclass 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

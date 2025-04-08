@@ -1,0 +1,143 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>Kubernetes, ETCD 개념부터 CLI 접근까지</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">Kubernetes, ETCD 개념부터 CLI 접근까지</h2>
+                                <div class="box-info">
+                                    <p class="category">기초 지식/K8s</p>
+                                    <p class="date">2025-03-24 22:41:54</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="360" height="163" >
+    <span data-lightbox="lightbox">
+        <img src="./img/etcd logo.png" width="360" height="163"  />
+    </span>
+    <figcaption>etcd logo</figcaption>
+</figure></p>
+<p data-ke-size="size16">이전 글에서 MasterNode 에 ETCD 라는 key-value store 가 있다는 사실을 알았습니다. 이게 정확히 무엇이고, 어떻게 동작하는지 알아보겠습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>ETCD 란?</b></h2>
+<p data-ke-size="size16">ETCD는 분산 시스템에서 데이터를 저장하고 관리하기 위한 경량화된 <b>분산 키-값 저장소(distributed key-value store)</b>입니다.</p>
+<p data-ke-size="size16">주로 시스템 구성 정보, 서비스 디스커버리, 클러스터 상태 정보를 저장하는 용도로 사용되며 강력한 일관성을 갖추고 있습니다. 또한 분산 시스템에서 사용되는 만큼 고가용성과 운영이 간단하다는 장점이 있습니다.</p>
+<h3 data-ke-size="size23"><b>ETCD의 버전들&nbsp;</b></h3>
+<p data-ke-size="size16">ETCD는 여러 버전을 거쳐 발전해왔으며, 현재는 version 3.6까지 출시되어 있습니다. v2에서는 기본적인 키-값 저장 기능을 제공했습니다. 그러다가 v3.1 이후에서 CNCF(Cloud Native Computing Foundation) incubation에 편입되면서 보다 견고하고 확장 가능한 기능들이 추가되었습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">v2 에서 v3 로 넘어가면서 큰 변화가 있다보니 몇몇 CLI 커맨드들이 뒤섞여있는데 ETCD 를 직접 설치하고 사용하는 섹션에서 제세한 내용을 다루겠습니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>ETCD 는 어떻게 동작하나.</b></h2>
+<p data-ke-size="size16">ETCD의 작동 원리는 크게 다음과 같이 설명할 수 있습니다.</p>
+<h4 data-end="1111" data-start="1087" data-ke-size="size20"><b>1. 분산 합의 알고리즘 (Raft)</b></h4>
+<ul style="list-style-type: disc;" data-end="1343" data-start="1112" data-ke-list-type="disc">
+<li data-end="1176" data-start="1112"><b>합의 알고리즘</b>: ETCD는 Raft 알고리즘을 이용하여 모든 노드가 동일한 상태를 유지하도록 합니다.</li>
+<li data-end="1278" data-start="1177"><b>리더 선출</b>: 클러스터 내에서 하나의 노드가 리더(Leader)로 선출되어, 모든 쓰기 요청을 관리하며 나머지 팔로워(Follower) 노드들은 리더의 명령을 따릅니다.</li>
+<li data-end="1343" data-start="1279"><b>데이터 복제</b>: 리더에서 변경된 데이터는 다수의 노드에 복제되어, 데이터의 일관성과 내결함성을 보장합니다.</li>
+</ul>
+<h4 data-end="1362" data-start="1345" data-ke-size="size20"><b>2. Watcher 기능</b></h4>
+<ul style="list-style-type: disc;" data-end="1509" data-start="1363" data-ke-list-type="disc">
+<li data-end="1445" data-start="1363"><b>변경 감지</b>: 클라이언트는 특정 키에 대한 변경을 감시(watch)할 수 있으며, 데이터가 업데이트되면 즉시 알림을 받을 수 있습니다.</li>
+<li data-end="1509" data-start="1446"><b>실시간 이벤트 처리</b>: 이 기능은 클러스터의 상태 변화나 구성 변경에 빠르게 대응할 수 있도록 돕습니다.</li>
+</ul>
+<h4 data-end="1525" data-start="1511" data-ke-size="size20"><b>3. 트랜잭션 지원</b></h4>
+<ul style="list-style-type: disc;" data-end="1675" data-start="1526" data-ke-list-type="disc">
+<li data-end="1595" data-start="1526"><b>원자성 보장</b>: 여러 키에 대한 복합 작업도 하나의 트랜잭션으로 처리할 수 있어, 데이터의 원자성을 보장합니다.</li>
+<li data-end="1675" data-start="1596"><b>조건부 연산</b>: 특정 조건이 충족되었을 때만 값을 변경하는 등의 조건부 연산이 가능하여, 보다 정교한 데이터 관리를 할 수 있습니다.</li>
+</ul>
+<h3 data-ke-size="size23"><b>직접 설치하고 사용해보기</b></h3>
+<p data-ke-size="size16"><a href="https://etcd.io/docs/v3.5/install/" target="_blank" rel="noopener">etcd 공식홈</a>에서 설치방법을 다양하게 알려주고 있습니다. mac을 이용중이므로 편하게 homebrew를 이용해 설치한뒤 버전을 체크해봤습니다.</p>
+<pre id="code_1742823500009" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>etcd --version</code></pre>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="./img/etcd-version.png"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">현재 설치된 etcd 가 3.5.20 버전임을 알 수 있습니다. 그런데 etcd 말고 etcdctl 을 입력하면 조금 다른 결과를 볼 수 있습니다.</p>
+<pre id="code_1742823710718" class="bash" data-ke-type="codeblock" data-ke-language="bash"><code>etcdctl</code></pre>
+<p><figure class="imageblock alignCenter" >
+    <span data-lightbox="lightbox">
+        <img src="./img/etcdctl.png"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">VERSION 외에<b> API VERSION</b> 을 알려주고 있습니다. 왜 그런걸까요?</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h3 data-ke-size="size23"><b>etcd 와 etcdctl</b></h3>
+<ul style="list-style-type: disc;" data-end="458" data-start="117" data-ke-list-type="disc">
+<li data-end="287" data-start="117"><b>etcd</b>
+<ul style="list-style-type: disc;" data-end="287" data-start="132" data-ke-list-type="disc">
+<li data-end="224" data-start="132"><b>서버 역할</b>: etcd는 분산형 키-값 저장소로, 클러스터 내에서 데이터 저장, 복제, 분산 합의(Raft 알고리즘 등)를 수행하는 서버 프로세스입니다.</li>
+<li data-end="287" data-start="227"><b>백엔드 서비스</b>: 클러스터 상태, 설정 정보, 서비스 디스커버리 등 중요한 메타데이터를 관리합니다.</li>
+</ul>
+</li>
+<li data-end="458" data-start="289"><b>etcdctl</b>
+<ul style="list-style-type: disc;" data-end="458" data-start="307" data-ke-list-type="disc">
+<li data-end="368" data-start="307"><b>클라이언트 도구</b>: etcdctl은 etcd 서버와 상호작용하기 위한 커맨드라인 클라이언트입니다.</li>
+<li data-end="458" data-start="371"><b>명령 실행</b>: 키-값의 추가, 조회, 삭제, 트랜잭션 실행, 변경 감시(watch) 등 다양한 명령어를 통해 서버와 데이터를 주고받을 수 있습니다.</li>
+</ul>
+</li>
+</ul>
+<p data-end="533" data-start="460" data-ke-size="size16">즉, etcd는 데이터를 실제로 관리하는 서버이고, etcdctl은 그 서버에 접근하기 위한 클라이언트 명령어라고 볼 수 있습니다.</p>
+<h3 data-end="562" data-start="540" data-ke-size="size23"><b>API 버전과 etcd 버전의 차이</b></h3>
+<ul style="list-style-type: disc;" data-end="1112" data-start="564" data-ke-list-type="disc">
+<li data-end="689" data-start="564"><b>etcd 버전</b>
+<ul style="list-style-type: disc;" data-end="689" data-start="582" data-ke-list-type="disc">
+<li data-end="689" data-start="582"><b>서버 소프트웨어의 버전</b>을 의미합니다. 예를 들어, etcd 서버의 최신 버전이 3.6라면, 이는 서버 내부 로직, 안정성, 성능 개선 등을 포함한 전체 시스템 업데이트를 나타냅니다.</li>
+</ul>
+</li>
+<li data-end="1112" data-start="691"><b>API 버전</b>
+<ul style="list-style-type: disc;" data-end="1112" data-start="708" data-ke-list-type="disc">
+<li data-end="752" data-start="708"><b>클라이언트와 서버 간의 인터페이스(프로토콜)의 버전</b>을 의미합니다.</li>
+<li data-end="827" data-start="755">예를 들어, etcdctl에서는 ETCDCTL_API 환경변수를 사용해 v2와 v3 API 모드를 선택할 수 있습니다.</li>
+<li data-end="1112" data-start="830"><b>이유</b>:
+<ul style="list-style-type: disc;" data-end="1112" data-start="846" data-ke-list-type="disc">
+<li data-end="967" data-start="846"><b>역호환성 유지</b>: 기존에 v2 API를 사용하던 애플리케이션이 있다면, 서버 소프트웨어 업데이트(예: 3.x 버전)와 별개로 안정적으로 v2 API를 제공함으로써 애플리케이션의 동작을 보장할 수 있습니다.</li>
+<li data-end="1112" data-start="972"><b>기능 개선과 독립적 발전</b>: API 인터페이스는 내부 동작 방식과 다르게 업데이트될 수 있으며, 새로운 기능(예: revision 기반 데이터 관리, lease 기능 등)을 API에 반영하면서도 서버 자체의 버전은 별도로 관리할 수 있습니다.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p data-end="1203" data-start="1114" data-ke-size="size16">이러한 분리는 서버의 내부 개선과 클라이언트와의 소통 방식을 독립적으로 관리할 수 있게 해주며, 사용자에게 보다 유연하고 안정적인 업그레이드 환경을 제공합니다.</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>참고</b></h2>
+<p data-ke-size="size16"><b>ETCD home: <a href="https://etcd.io/" target="_blank" rel="noopener&nbsp;noreferrer">https://etcd.io/</a></b></p>
+<figure id="og_1742822707805" contenteditable="false" data-ke-type="opengraph" data-ke-align="alignCenter" data-og-type="website" data-og-title="etcd" data-og-description="A distributed, reliable key-value store for the most critical data of a distributed system Learn more Quickstart What is etcd? etcd is a strongly consistent, distributed key-value store that provides a reliable way to store data that needs to be accessed b" data-og-host="etcd.io" data-og-source-url="https://etcd.io/" data-og-url="https://etcd.io/" data-og-image="https://scrap.kakaocdn.net/dn/mq7lu/hyYvpGJ350/sYISPMX4tvE78Jy4NVOeDK/img.png?width=2550&amp;height=826&amp;face=0_0_2550_826,https://scrap.kakaocdn.net/dn/eSc3L/hyYvmQLG6a/8EgPlQppFOTmN3a2Xd51ZK/img.png?width=2184&amp;height=936&amp;face=0_0_2184_936,https://scrap.kakaocdn.net/dn/7wofV/hyYxPYKqRL/8zS1k0TBN04oWIlY4BiQG0/img.png?width=2401&amp;height=558&amp;face=0_0_2401_558"><a href="https://etcd.io/" target="_blank" rel="noopener" data-source-url="https://etcd.io/">
+<div class="og-image" style="background-image: url('https://scrap.kakaocdn.net/dn/mq7lu/hyYvpGJ350/sYISPMX4tvE78Jy4NVOeDK/img.png?width=2550&amp;height=826&amp;face=0_0_2550_826,https://scrap.kakaocdn.net/dn/eSc3L/hyYvmQLG6a/8EgPlQppFOTmN3a2Xd51ZK/img.png?width=2184&amp;height=936&amp;face=0_0_2184_936,https://scrap.kakaocdn.net/dn/7wofV/hyYxPYKqRL/8zS1k0TBN04oWIlY4BiQG0/img.png?width=2401&amp;height=558&amp;face=0_0_2401_558');">&nbsp;</div>
+<div class="og-text">
+<p class="og-title" data-ke-size="size16">etcd</p>
+<p class="og-desc" data-ke-size="size16">A distributed, reliable key-value store for the most critical data of a distributed system Learn more Quickstart What is etcd? etcd is a strongly consistent, distributed key-value store that provides a reliable way to store data that needs to be accessed b</p>
+<p class="og-host" data-ke-size="size16">etcd.io</p>
+</div>
+</a></figure>
+<p data-ke-size="size16">&nbsp;</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

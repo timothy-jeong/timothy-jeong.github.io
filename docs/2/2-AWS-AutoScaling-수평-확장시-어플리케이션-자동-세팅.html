@@ -1,0 +1,189 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>AWS AutoScaling 수평 확장시 어플리케이션 자동 세팅</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">AWS AutoScaling 수평 확장시 어플리케이션 자동 세팅</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/개발 탐구</p>
+                                    <p class="date">2024-02-09 14:55:22</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p data-ke-size="size16">아직 백엔드 인프라쪽에 전문성이 높지 않아서 여러가지 시도를 해보고 있습니다.</p>
+<p data-ke-size="size16">그 중에서도 항상 저에게 의문을 던져주었던 AWS 의 오토스케일링 그룹을 가지고 놀아보고자합니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">저에게 주어진 주된 의문은</p>
+<p data-ke-size="size16">(1) 트래픽이 증가해서 자동으로 인스턴스가 늘어나면 그 안에 서버도 복제되는가?</p>
+<p data-ke-size="size16">(2) 서버가 복제된다면 포트포워딩, 라우팅 설정도 알아서 자동으로 되나?</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">아래와 같이 간단한 환경을 만들고 테스트를 해봤습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p><figure class="imageblock alignCenter" width="550" height="565" >
+    <span data-lightbox="lightbox">
+        <img src="./img/스크린샷 2024-02-09 오후 2.23.50.png" width="550" height="565"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">직접 실험해본 결과 이 질문에 대한 대답은 "아니다" 였습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">(1) 트래픽이 증가해서 자동으로 인스턴스가 늘어나면 그 안에 서버도 복제되는가?</p>
+<p data-ke-size="size16">&nbsp; &nbsp; &nbsp; &nbsp;-&gt; 시작템플릿에서 지정된 백지상태의 EC2 가 하나더 만들어진다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">(2) 서버가 복제된다면 포트포워딩, 라우팅 설정도 알아서 자동으로 되나?</p>
+<p data-ke-size="size16">&nbsp; &nbsp; &nbsp; &nbsp;-&gt; 로드밸런서가 연결되어 있다면 자동으로 타겟그룹을 생성하여 80번 포트로 연결해줍니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">오토스케일링 그룹을 쓰는것은 가용성을 높이기 위해서인데 새롭게 인스턴스가 추가될때마다 직접 서버세팅과 타겟그룹 세팅을 새롭게 해줘야한다면 너무 번거롭겠다는 생각이 들었죠.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">하지만 해결못할 문제는 아닌것 같았습니다.</p>
+<p data-ke-size="size16">인스턴스가 하나 더 늘어난다면 <b>"시작템플릿에서 지정된 백지상태의 EC2"</b> 가 늘어나기 때문에 시작템플릿에서 EC2 의 부팅옵션을 바꿔주면 되는 문제였으니까요.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그리고 다행스럽게도 AWS 시작템플릿을 만들때는 <b>사용자 데이터</b>라는 것을 지정할 수 있습니다.</p>
+<p data-ke-size="size14">(사용자데이터는 EC2 가 시작될때 실행하는 스크립트를 말합니다.)</p>
+<p><figure class="imageblock alignCenter" width="600" height="374" >
+    <span data-lightbox="lightbox">
+        <img src="./img/스크린샷 2024-02-09 오후 2.30.13.png" width="600" height="374"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이 사용자 데이터 파일에</p>
+<p data-ke-size="size16">(1) git, java, nginx 를 다운로드하고</p>
+<p data-ke-size="size16">(2) 관련 서버 파일을 git clone 하고</p>
+<p data-ke-size="size16">(3) 서버를 build 한 다음에</p>
+<p data-ke-size="size16">(4) build 된 결과물을 backgroud 에서 run 하고</p>
+<p data-ke-size="size16">(5) nginx 설정을 통해 80 번 요청이 8080으로 가게끔 만들어준다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이것들이 가능하게 하는 스크립트를 만들면됩니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이 스크립트를 만들때 3개의 장애물과 해결방법은 다음과 같습니다.</p>
+<p data-ke-size="size16">(1) private repository 에 있는 코드를 어떻게 clone 할 것인가</p>
+<p data-ke-size="size16">&nbsp; &nbsp; &nbsp; -&gt; clone 할때 https path 에 secret token 정보를 같이 보내니까 해결되더라</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">(2) 이 사용자 데이터 파일은 /root 에서 실행 되는데 어떻게 서버를 빌드할 것인가</p>
+<p data-ke-size="size16">&nbsp; &nbsp; &nbsp; -&gt; 스크립트 안에서도 cd 명령어를 통해 이동이 되더라!</p>
+<p data-ke-size="size16">&nbsp; &nbsp; &nbsp; -&gt; build 명령을 위한 스크립트를 따로 만들어서 같이 push 해두고 이 파일을 실행했다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">(3) 어떻게 스크립트를 통해 nginx.conf 파일을 편집할 것인가</p>
+<p data-ke-size="size16">&nbsp; &nbsp; &nbsp; -&gt; nginx.conf 파일도 결국엔 텍스트 파일이니까 내부 텍스트를 모두 지우고 새롭게 써버리자</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">그리고 이 모든 고민을 해결한 스크립트는 다음과 같습니다.</p>
+<pre id="code_1707457786739" class="bash" data-ke-language="bash" data-ke-type="codeblock"><code>#!/bin/bash
+
+sudo yum install git -y # git 설치
+sudo yum install java-17-amazon-corretto-headless -y  # java 17 설치
+sudo yum install nginx -y # nginx 설치
+
+# git 에서 관련 코드를 clone 하고 public_data_server 디렉터리에 넣는다.
+echo "STEP : clone"
+git clone https://{ghp_secret_info}@github.com{repository_info}.git /home/ec2-user/public_data_server
+
+echo "STEP : chmod"
+sudo chmod +x /home/ec2-user/public_data_server/build-application.sh
+
+echo "STEP : RUN build code"
+cd /home/ec2-user/public_data_server   # public_data_server 디렉토리로 이동
+sudo ./gradlew clean build   # 스크립트 실행
+
+echo "STEP : RUN jar"
+JAR_NAME=$(find /home/ec2-user/public_data_server/build/libs/ | grep 'public_data-prod')
+
+chmod +x "${JAR_NAME}"
+
+nohup java -Xms2048m -Xmx8092m -jar "${JAR_NAME}" &amp;
+
+echo "config nginx 80 -&gt; 8080"
+
+
+nginx_config="
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log notice;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format main '[\$status] \$remote_addr - [\$time_local] \"\$request\" [\$http_x_forwarded_for]';
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    keepalive_timeout   65;
+    types_hash_max_size 8192;
+
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+
+    include /etc/nginx/conf.d/*.conf;
+
+    server {
+        listen       80;
+        listen       [::]:80;
+        server_name  _;
+        root         /usr/share/nginx/html;
+
+        location / {
+                proxy_set_header   X-Forwarded-For \$remote_addr;
+                proxy_set_header   Host \$http_host;
+                proxy_pass         \"http://127.0.0.1:8080\";
+        }
+
+        include /etc/nginx/default.d/*.conf;
+
+        error_page 404 /404.html;
+        location = /404.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+        }
+    }
+}
+"
+
+sudo bash -c "echo '' &gt; /etc/nginx/nginx.conf"
+
+sudo bash -c "echo '$nginx_config' &gt; /etc/nginx/nginx.conf"
+
+sudo systemctl restart nginx
+
+echo "STEP: Nginx configuration updated and reloaded successfully."</code></pre>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이 방법을 통해서 오토스케일링 그룹 안에서 새롭게 시작되는 EC2 인스턴스가 자동으로 서버를 빌드, 실행하고 nginx 설정을 변경해서 80번 요청이 8080으로 가도록 할 수 있었습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<p data-ke-size="size16">이러한 설정은 public subnet 에서만 가능한 설정이기 때문에 private subnet 을 사용하는 일반 기업 환경에서는 부적절합니다. 하지만 스스로 생각해서 문제를 해결하는 과정은 항상 재미있기 때문이 즐거운 시간이었습니다. 다음엔 private subnet 환경에서 하는 방법을 알아보고 싶네요.</p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #AWS #springboot #autoscaling #AutoScalingGroup #오토스케일링그룹 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

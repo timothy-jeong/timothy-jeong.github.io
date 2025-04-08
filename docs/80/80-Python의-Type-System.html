@@ -1,0 +1,131 @@
+
+<meta charset="utf-8">
+<html lang="ko">
+<head>
+    <link rel="stylesheet" type="text/css" href="./../style.css" />
+    <title>Python의 Type System</title>
+</head>
+<body id="tt-body-page" class="">
+<div id="wrap" class="wrap-right">
+    <div id="container">
+        <main class="main ">
+            <div class="area-main">
+                <div class="area-view">
+                    <div class="article-header">
+                        <div class="inner-article-header">
+                            <div class="box-meta">
+                                <h2 class="title-article">Python의 Type System</h2>
+                                <div class="box-info">
+                                    <p class="category">탐구 생활/python</p>
+                                    <p class="date">2025-03-20 14:42:52</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="article-view">
+                        <div class="contents_style">
+                            <p><figure class="imageblock alignCenter" width="360" height="360" >
+    <span data-lightbox="lightbox">
+        <img src="./img/DALL&middot;E 2025-03-20 15.54.56 - A conceptual illustration of Python's TypeHint feature. The image should include a Python script with function annotations using TypeHint, such as def.webp" width="360" height="360"  />
+    </span>
+    <figcaption></figcaption>
+</figure></p>
+<p data-ke-size="size16"><span style="color: #333333; text-align: start;"><span>&nbsp; <a href="https://probehub.tistory.com/78" target="_blank" rel="noopener">gRPC에 대해서 알아보던중</a>&nbsp;</span>pyi 파일을 처음 보았고, 이 파일이 Python Type System 중 하나인 stub file 이라는 것을 알게되었습니다. stub file 이 무엇인지 궁금해졌고, 이 궁금증은 Python의&nbsp; Type System 전체로 확장되었습니다. 전반적인 내용을 정리해보고자 합니다.<span>&nbsp;</span></span><span style="color: #333333; text-align: start;">Python 공식문서중<span>&nbsp;</span></span><a style="color: #0070d1; text-align: start;" href="https://typing.python.org/en/latest/guides/index.html">TypeHint Guide</a>에서 많은 내용을 참고했습니다.&nbsp;</p>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>왜 Type System이 필요한가?</b></h2>
+<p data-ke-size="size16">우선 프로그래밍 언어를 구분할때 다음과 같은 기준이 있습니다.</p>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>타입 캐스팅이 자유로운지에 따라 강 타입/약 타입</li>
+<li>컴파일시 타입을 체크하는지에 따라 정적 타입/동적 타입</li>
+</ul>
+<p data-ke-size="size16">이러한 기준에서 봤을때 <b>Python은 약 타입이자, 동적 타이핑 언어</b>입니다. 즉 명시적인 타입 캐스팅 없이 타입 변환이 가능하며, <a href="https://docs.python.org/3/whatsnew/3.13.html#an-experimental-just-in-time-jit-compiler" target="_blank" rel="noopener">JIT 컴파일</a>을 하긴 하지만 기본적으로 Interpreter 를 통해 동작하기 때문에 런타임에 타입을 체크하는 동적 타입 언어인 것입니다.&nbsp;</p>
+<p data-ke-size="size14">&nbsp;</p>
+<p data-ke-size="size16">이러한 Python에게 Type System 이 필요한 이유는 다음의 이점이 있기 때문입니다.</p>
+<p data-ke-size="size14">&nbsp;</p>
+<p data-ke-size="size16"><b>1. 안정성과 버그 조기 발견:</b><br />동적 타이핑은 실행 시점에서 타입 에러를 발견하기 때문에, 큰 규모의 프로젝트나 복잡한 코드에서는 예기치 않은 버그가 발생할 위험이 큽니다. 정적 타입 힌트를 도입하면 코드 작성 시점에서 오류를 미리 잡아내어 안정성을 높일 수 있습니다.</p>
+<p data-ke-size="size14">&nbsp;</p>
+<p data-ke-size="size16"><b>2. 코드 가독성과 문서화:</b><br />타입 주석은 함수와 클래스의 의도를 명확하게 해 주며, 이를 통해 코드의 이해도가 향상됩니다. 이는 협업 환경에서 특히 중요한 역할을 합니다.</p>
+<p data-ke-size="size14">&nbsp;</p>
+<p data-ke-size="size16"><b>3. 개발 도구와의 시너지 효과:</b><br />타입 힌트를 활용하면 IDE 및 정적 분석 도구(예: mypy, Pyright)와의 연동이 원활해져 자동완성, 리팩토링, 코드 탐색 등에서 생산성을 크게 향상시킬 수 있습니다.</p>
+<p data-ke-size="size16">&nbsp;</p>
+<h3 data-ke-size="size23"><b>그럼에도 불구하고, Python은 정적 타입 검사를 강제하지 않는다.</b></h3>
+<p data-ke-size="size16">정적 타입 힌트가 제공하는 여러 이점에도 불구하고, Python은 여전히 약 타입(dynamic typing) 언어로 남아있습니다. <a href="https://typing.python.org/en/latest/guides/typing_anti_pitch.html" target="_blank" rel="noopener">Python 공식 문서</a>에서는 다양한 이유를 들고 있지만 짧게 정리하자면 다음과 같습니다:</p>
+<blockquote data-ke-style="style3">Python은 처음부터 동적 타이핑 언어였고, 이 언어를 사용하는 개발자에게 정적 타입 검사를 강제할 순 없다. 타입 어노테이션자체가 가독성을 해치는 경우도 존재하며, 동적 프레임워크의 특성상 정적 타입을 지정하기 어려울 수 있다.&nbsp; 또한 <a href="https://www.hyrumslaw.com/" target="_blank" rel="noopener">Hyrum's Law</a>에 따르면 타입 어노테이션은 복잡해지거나 Any 로 치환될 가능성이 있다.</blockquote>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>Type System How to</b></h2>
+<p data-ke-size="size16">이제는 왜 Type System이 필요한지, 그럼에도 불구하고 왜 정적 타입을 강제하지 않는지 알게되었습니다. 그렇다면 Python에서는 Type System을 이용하는 방법을 알아보겠습니다.</p>
+<h3 data-ke-size="size23"><b>간단한 Typing</b></h3>
+<p data-ke-size="size16">Python의&nbsp;typing&nbsp;모듈을&nbsp;이용하면&nbsp;함수&nbsp;인자,&nbsp;반환값&nbsp;등&nbsp;코드의&nbsp;주요&nbsp;부분에&nbsp;타입&nbsp;정보를&nbsp;추가할&nbsp;수&nbsp;있습니다.&nbsp;이는&nbsp;코드의&nbsp;의도를&nbsp;명확히&nbsp;하고,&nbsp;정적&nbsp;분석&nbsp;도구(예:&nbsp;mypy)를&nbsp;통한&nbsp;오류&nbsp;검출에&nbsp;도움을&nbsp;줍니다.</p>
+<pre id="code_1742453207570" class="python" data-ke-language="python" data-ke-type="codeblock"><code>def greet(name: str) -&gt; str:
+    return f"Hello, {name}!"
+
+# 사용 예시
+print(greet("Alice"))</code></pre>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>name:&nbsp;str&nbsp;은&nbsp;매개변수&nbsp;name이&nbsp;문자열임을&nbsp;명시합니다.&nbsp;</li>
+<li>-&gt;&nbsp;str&nbsp;은&nbsp;함수가&nbsp;문자열을&nbsp;반환함을&nbsp;나타냅니다.</li>
+</ul>
+<h3 data-ke-size="size23"><b>Generic Type</b></h3>
+<p data-ke-size="size16">Generic&nbsp;Type은&nbsp;여러&nbsp;타입에&nbsp;대해&nbsp;동일한&nbsp;로직을&nbsp;재사용할&nbsp;수&nbsp;있게&nbsp;해줍니다.&nbsp;</p>
+<p data-ke-size="size16">TypeVar와&nbsp;Generic을&nbsp;사용하여&nbsp;타입을&nbsp;일반화함으로써,&nbsp;보다&nbsp;유연하면서도&nbsp;타입&nbsp;안전한&nbsp;코드를&nbsp;작성할&nbsp;수&nbsp;있습니다.</p>
+<pre id="code_1742453304402" class="python" data-ke-language="python" data-ke-type="codeblock"><code>from typing import TypeVar, Generic, List
+
+T = TypeVar('T')
+
+class Stack(Generic[T]):
+    def __init__(self) -&gt; None:
+        self._items: List[T] = []
+    
+    def push(self, item: T) -&gt; None:
+        self._items.append(item)
+    
+    def pop(self) -&gt; T:
+        return self._items.pop()
+
+# 정수형 스택 예시
+int_stack = Stack[int]()
+int_stack.push(10)
+print(int_stack.pop())
+
+# 문자열 스택 예시
+str_stack = Stack[str]()
+str_stack.push("hello")
+print(str_stack.pop())</code></pre>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>T&nbsp;=&nbsp;TypeVar('T')를&nbsp;통해&nbsp;임의의&nbsp;타입&nbsp;변수를&nbsp;선언합니다.&nbsp;</li>
+<li>Stack(Generic[T])&nbsp;클래스는&nbsp;다양한&nbsp;타입의&nbsp;데이터를&nbsp;저장할&nbsp;수&nbsp;있는&nbsp;스택을&nbsp;구현합니다.&nbsp;</li>
+<li>각각의 스택 인스턴스는 타입 인자를 통해 정해진 타입만을 다루게 됩니다.</li>
+</ul>
+<h3 data-ke-size="size23"><b>Stub File</b></h3>
+<p data-ke-size="size16">Stub&nbsp;File(.pyi&nbsp;파일)은&nbsp;<b>기존&nbsp;코드와&nbsp;별도로&nbsp;타입&nbsp;정보를&nbsp;제공</b>하는&nbsp;파일입니다.&nbsp;이를&nbsp;통해&nbsp;라이브러리나&nbsp;기존&nbsp;코드베이스에&nbsp;직접&nbsp;손대지&nbsp;않고도&nbsp;정적&nbsp;타입&nbsp;정보를&nbsp;추가할&nbsp;수&nbsp;있어,&nbsp;<b>점진적&nbsp;도입에&nbsp;매우&nbsp;유용</b>합니다. 특히 외부 라이브러리(external library)의 경우, 원본 코드를 수정할 수 없거나 수정이 어려운 상황에서 Stub File을 이용하여 타입 정보를 보완할 수 있습니다. 이러한 이점 때문에 Python에서 gRPC를 활용할때 사용됩니다.</p>
+<p data-ke-size="size16"><b>mylib.py:</b></p>
+<pre id="code_1742453535355" class="python" data-ke-language="python" data-ke-type="codeblock"><code>def add(a, b):
+    return a + b</code></pre>
+<p data-ke-size="size16"><b>mylib.pyi:</b></p>
+<pre id="code_1742453552591" class="python" data-ke-language="python" data-ke-type="codeblock"><code>def add(a: int, b: int) -&gt; int: ...</code></pre>
+<ul style="list-style-type: disc;" data-ke-list-type="disc">
+<li>실제&nbsp;코드(mylib.py)는&nbsp;타입&nbsp;정보&nbsp;없이&nbsp;동작하지만,&nbsp;타입&nbsp;스텁&nbsp;파일(mylib.pyi)은&nbsp;정적&nbsp;타입&nbsp;검사기에게&nbsp;함수&nbsp;add의&nbsp;인자와&nbsp;반환값이&nbsp;모두&nbsp;정수임을&nbsp;알려줍니다.&nbsp;</li>
+<li>외부&nbsp;라이브러리의&nbsp;경우,&nbsp;해당&nbsp;라이브러리가&nbsp;타입&nbsp;정보를&nbsp;포함하고&nbsp;있지&nbsp;않다면,&nbsp;별도의&nbsp;Stub&nbsp;File을&nbsp;제공하여&nbsp;사용자들이&nbsp;정적&nbsp;타입&nbsp;검사&nbsp;도구를&nbsp;통해&nbsp;타입&nbsp;안전성을&nbsp;확보할&nbsp;수&nbsp;있도록&nbsp;돕습니다.&nbsp;</li>
+<li>예를&nbsp;들어,&nbsp;typeshed&nbsp;프로젝트는&nbsp;Python의&nbsp;표준&nbsp;라이브러리와&nbsp;다양한&nbsp;외부&nbsp;라이브러리의&nbsp;타입&nbsp;정보를&nbsp;수집하여&nbsp;관리하며,&nbsp;이를&nbsp;통해&nbsp;많은&nbsp;라이브러리들이&nbsp;정적&nbsp;타입&nbsp;검사를&nbsp;활용할&nbsp;수&nbsp;있게&nbsp;합니다.</li>
+</ul>
+<hr contenteditable="false" data-ke-type="horizontalRule" data-ke-style="style5" />
+<h2 data-ke-size="size26"><b>참고</b></h2>
+<p data-ke-size="size16"><b>Python Document, TypeSystem Guides: <a href="https://typing.python.org/en/latest/guides/index.html" target="_blank" rel="noopener&nbsp;noreferrer">https://typing.python.org/en/latest/guides/index.html</a></b></p>
+<p data-ke-size="size16"><b>Python Docuemnt,Stubfile: <a href="https://typing.python.org/en/latest/spec/distributing.html#stub-files" target="_blank" rel="noopener&nbsp;noreferrer">https://typing.python.org/en/latest/spec/distributing.html#stub-files</a></b></p>
+<p data-ke-size="size16"><b>Python Document, Writing&nbsp;and&nbsp;Maintaining: <a href="https://typing.python.org/en/latest/guides/writing_stubs.html" target="_blank" rel="noopener&nbsp;noreferrer">https://typing.python.org/en/latest/guides/writing_stubs.html</a></b></p>
+<p data-ke-size="size16"><b>pep TypeHints: <a href="https://peps.python.org/pep-0484/#stub-files" target="_blank" rel="noopener&nbsp;noreferrer">https://peps.python.org/pep-0484</a></b></p>
+<p data-ke-size="size16"><b>Python 3.13 JIT: <a href="https://docs.python.org/3/whatsnew/3.13.html#an-experimental-just-in-time-jit-compiler" target="_blank" rel="noopener&nbsp;noreferrer">https://docs.python.org/3/whatsnew/3.13.html#an-experimental-just-in-time-jit-compiler</a></b></p>
+                        </div>
+                        <br/>
+                        <div class="tags">
+                            #python typehint #python 타입힌트 #python stubfile #stubfile 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+</body>
+</html>
